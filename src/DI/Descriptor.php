@@ -2,6 +2,7 @@
 
 namespace DI;
 
+use DI\Abstraction\ActionInterface;
 use DI\Abstraction\DescriptorInterface;
 use ReflectionClass;
 
@@ -105,14 +106,6 @@ class Descriptor implements DescriptorInterface
     }
 
     /**
-     * @return array
-     */
-    public function getParams()
-    {
-        return $this->params;
-    }
-
-    /**
      * @param array $value
      *
      * @return DescriptorInterface
@@ -122,14 +115,6 @@ class Descriptor implements DescriptorInterface
         $this->params = $value;
 
         return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getParams()
-    {
-        return $this->params;
     }
 
     /**
@@ -247,21 +232,20 @@ class Descriptor implements DescriptorInterface
      *
      * @return DescriptorInterface
      */
-    public function param($identifier, $value)
+    public function setParam($identifier, $value)
     {
-        // TODO: Implement param() method.
+        // TODO: Implement setParam() method.
     }
 
     /**
-     * Call a method after instantiation with the specified parameters.
+     * Execute the given callback after class instance is created.
      *
-     * @param callable|string $callback
-     * @param array           $params
+     * @param ActionInterface $action
      *
-     * @return mixed
+     * @return DescriptorInterface
      */
-    public function call($callback, array $params)
+    public function addAction(ActionInterface $action)
     {
-        // TODO: Implement call() method.
+        // TODO: Implement addAction() method.
     }
 }

@@ -61,15 +61,14 @@ interface DescriptorInterface
      *
      * @return DescriptorInterface
      */
-    public function param($identifier, $value);
+    public function setParam($identifier, $value);
 
     /**
-     * Call a method after instantiation with the specified parameters.
+     * Execute the given callback after class instance is created.
      *
-     * @param callable|string $callback
-     * @param array           $params
+     * @param ActionInterface $action
      *
-     * @return mixed
+     * @return DescriptorInterface
      */
-    public function call($callback, array $params);
+    public function addAction(ActionInterface $action);
 }

@@ -2,12 +2,12 @@
 
 namespace DI\Abstraction;
 
-interface CallbackInterface 
+interface CallbackInterface extends ActionInterface
 {
     /**
      * @param callable $callable
      *
-     * @return CallbackInterface
+     * @return ActionInterface
      */
     public function setCallback($callable);
 
@@ -19,12 +19,7 @@ interface CallbackInterface
     /**
      * @param array $params
      *
-     * @return CallbackInterface
+     * @return ActionInterface
      */
     public function setParams($params);
-
-    /**
-     * @return mixed
-     */
-    public function execute();
 }
