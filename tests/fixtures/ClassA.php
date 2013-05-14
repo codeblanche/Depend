@@ -33,11 +33,11 @@ class ClassA
     protected $array;
 
     /**
-     * @param \ClassB                                    $b
-     * @param \ClassC                                    $c
-     * @param \ClassD                                    $d
-     * @param string                                     $name
-     * @param array                                      $array
+     * @param \ClassB                                        $b
+     * @param \ClassC                                        $c
+     * @param \ClassD                                        $d
+     * @param string                                         $name
+     * @param array                                          $array
      * @param Depend\Exception\InvalidArgumentException      $except
      */
     function __construct(
