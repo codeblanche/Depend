@@ -1,6 +1,6 @@
 <?php
 
-namespace DI\Abstraction;
+namespace Depend\Abstraction;
 
 interface ActionInterface
 {

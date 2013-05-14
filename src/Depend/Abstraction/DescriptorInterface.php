@@ -1,8 +1,8 @@
 <?php
 
-namespace DI\Abstraction;
+namespace Depend\Abstraction;
 
-use DI\Manager;
+use Depend\Manager;
 use ReflectionClass;
 
 interface DescriptorInterface

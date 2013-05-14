@@ -1,9 +1,9 @@
 <?php
 
-namespace DI;
+namespace Depend;
 
-use DI\Abstraction\ActionInterface;
-use DI\Abstraction\DescriptorInterface;
+use Depend\Abstraction\ActionInterface;
+use Depend\Abstraction\DescriptorInterface;
 use ReflectionClass;
 
 class Descriptor implements DescriptorInterface
@@ -51,7 +51,7 @@ class Descriptor implements DescriptorInterface
     /**
      * @var array
      */
-    protected $callbacks = array();
+    protected $actions = array();
 
     /**
      * @return Manager
@@ -112,7 +112,13 @@ class Descriptor implements DescriptorInterface
      */
     public function setParams(array $value)
     {
-        $this->params = $value;
+        if (!is_array($value)) {
+            return $this;
+        }
+
+        foreach ($value as $identifier => $param) {
+            $this->setParam($identifier, $param);
+        }
 
         return $this;
     }
@@ -213,15 +219,11 @@ class Descriptor implements DescriptorInterface
     {
         $paramClass = $param->getClass();
 
-        if ($paramClass instanceof ReflectionClass) {
-            $descriptor = clone $this;
-
-            $descriptor->load($paramClass);
-
-            return $descriptor;
+        if (!($paramClass instanceof ReflectionClass)) {
+            return null;
         }
 
-        return null;
+        return $this->manager->describe($paramClass->getName(), $paramClass);
     }
 
     /**
@@ -234,7 +236,13 @@ class Descriptor implements DescriptorInterface
      */
     public function setParam($identifier, $value)
     {
-        // TODO: Implement setParam() method.
+        if (is_numeric($identifier) && isset($this->paramNames[$identifier])) {
+            $identifier = $this->paramNames[$identifier];
+        }
+
+        $this->params[$identifier] = $value;
+
+        return $this;
     }
 
     /**
@@ -246,6 +254,6 @@ class Descriptor implements DescriptorInterface
      */
     public function addAction(ActionInterface $action)
     {
-        // TODO: Implement addAction() method.
+        $this->actions[] = $action;
     }
 }

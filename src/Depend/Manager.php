@@ -1,22 +1,22 @@
 <?php
 
-namespace DI;
+namespace Depend;
 
-use DI\Abstraction\DescriptorInterface;
-use DI\Abstraction\FactoryInterface;
-use DI\Exception\InvalidArgumentException;
+use Depend\Abstraction\DescriptorInterface;
+use Depend\Abstraction\FactoryInterface;
+use Depend\Exception\InvalidArgumentException;
 
 class Manager
 {
     /**
      * @var DescriptorInterface[]
      */
-    protected $descriptors;
+    protected $descriptors = array();
 
     /**
      * @var DescriptorInterface[]
      */
-    protected $named;
+    protected $named = array();
 
     /**
      * @var DescriptorInterface
@@ -90,12 +90,13 @@ class Manager
     }
 
     /**
-     * @param string $className
+     * @param string           $className
+     * @param \ReflectionClass $reflectionClass
      *
      * @throws Exception\InvalidArgumentException
      * @return \DI\Abstraction\DescriptorInterface
      */
-    public function describe($className)
+    public function describe($className, \ReflectionClass $reflectionClass = null)
     {
         if (!class_exists($className)) {
             throw new InvalidArgumentException("Class '$className' could not be found");
@@ -109,9 +110,13 @@ class Manager
 
         $descriptor = clone $this->descriptorPrototype;
 
-        $descriptor->load(new \ReflectionClass($className));
-
         $this->descriptors[$key] = $descriptor;
+
+        if (!($reflectionClass instanceof \ReflectionClass)) {
+            $reflectionClass = new \ReflectionClass($className);
+        }
+
+        $descriptor->load($reflectionClass);
 
         return $descriptor;
     }

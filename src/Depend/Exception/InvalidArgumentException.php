@@ -1,6 +1,6 @@
 <?php
 
-namespace DI\Exception;
+namespace Depend\Exception;
 
 class InvalidArgumentException extends \InvalidArgumentException
 {

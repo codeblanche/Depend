@@ -1,10 +1,10 @@
 <?php
 
-namespace DI;
+namespace Depend;
 
-use DI\Abstraction\DescriptorInterface;
-use DI\Abstraction\FactoryInterface;
-use DI\Exception\InvalidArgumentException;
+use Depend\Abstraction\DescriptorInterface;
+use Depend\Abstraction\FactoryInterface;
+use Depend\Exception\InvalidArgumentException;
 
 class Factory implements FactoryInterface
 {
@@ -44,14 +44,33 @@ class Factory implements FactoryInterface
         $params          = $descriptor->getParams();
 
         if (!isset($this->instances[$class]) || $new === true) {
-            $this->instances[$class] = $reflectionClass->newInstanceArgs(
-                $this->resolveDescriptors($params)
-            );
+            $this->instances[$class] = $reflectionClass->newInstanceWithoutConstructor();
+            $constructor             = $this->resolveConstructor($reflectionClass);
+
+            if ($constructor instanceof \ReflectionMethod) {
+                $constructor->invokeArgs($this->instances[$class], $this->resolveDescriptors($params));
+            }
         }
 
         // TODO: check for callbacks and execute them - also resolveDescriptors for callback parameters.
 
         return $this->instances[$class];
+    }
+
+    /**
+     * @param \ReflectionClass $reflectionClass
+     *
+     * @return \ReflectionMethod|null
+     */
+    protected function resolveConstructor(\ReflectionClass $reflectionClass)
+    {
+        $constructor = null;
+
+        if ($reflectionClass->isInstantiable()) {
+            $constructor = $reflectionClass->getConstructor();
+        }
+
+        return $constructor;
     }
 
     /**

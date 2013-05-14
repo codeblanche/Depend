@@ -1,9 +1,9 @@
 <?php
 
-namespace DI;
+namespace Depend;
 
-use DI\Abstraction\CallbackInterface;
-use DI\Exception\RuntimeException;
+use Depend\Abstraction\CallbackInterface;
+use Depend\Exception\RuntimeException;
 
 class Callback implements CallbackInterface
 {
