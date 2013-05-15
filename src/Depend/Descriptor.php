@@ -110,7 +110,7 @@ class Descriptor implements DescriptorInterface
      *
      * @return DescriptorInterface
      */
-    public function setParams(array $value)
+    public function setParams($value)
     {
         if (!is_array($value)) {
             return $this;
@@ -217,13 +217,18 @@ class Descriptor implements DescriptorInterface
      */
     protected function resolveArgumentValue(\ReflectionParameter $param)
     {
-        $paramClass = $param->getClass();
+        try {
+            $paramClass = $param->getClass();
+        }
+        catch (\ReflectionException $e) {
+            print_r($e->getTrace());
+        }
 
         if (!($paramClass instanceof ReflectionClass)) {
             return null;
         }
 
-        return $this->manager->describe($paramClass->getName(), $paramClass);
+        return $this->manager->describe($paramClass->getName(), null, $paramClass);
     }
 
     /**
@@ -255,5 +260,7 @@ class Descriptor implements DescriptorInterface
     public function addAction(ActionInterface $action)
     {
         $this->actions[] = $action;
+
+        return $this;
     }
 }

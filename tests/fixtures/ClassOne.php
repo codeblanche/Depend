@@ -1,7 +1,7 @@
 <?php
 
 
-class ClassOne 
+class ClassOne implements InterfaceOne
 {
 
 }

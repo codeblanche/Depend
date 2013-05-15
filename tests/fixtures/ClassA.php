@@ -1,19 +1,21 @@
 <?php
 
+use Depend\Exception\InvalidArgumentException;
+
 class ClassA
 {
     /**
-     * @var \ClassB
+     * @var ClassB
      */
     protected $b;
 
     /**
-     * @var \ClassC
+     * @var ClassC
      */
     protected $c;
 
     /**
-     * @var \ClassD
+     * @var ClassD
      */
     protected $d;
 
@@ -23,85 +25,77 @@ class ClassA
     protected $name;
 
     /**
-     * @var mixed
-     */
-    protected $except;
-
-    /**
      * @var array
      */
     protected $array;
 
     /**
-     * @param \ClassB                                        $b
-     * @param \ClassC                                        $c
-     * @param \ClassD                                        $d
+     * @var Depend\Exception\InvalidArgumentException
+     */
+    protected $except;
+
+    /**
+     * @param ClassB                                         $b
+     * @param ClassC                                         $c
+     * @param ClassD                                         $d
      * @param string                                         $name
      * @param array                                          $array
      * @param Depend\Exception\InvalidArgumentException      $except
      */
     function __construct(
-        \ClassB $b,
-        \ClassC $c,
-        \ClassD $d,
+        ClassB $b,
+        ClassC $c,
+        ClassD $d,
         $name,
         $array,
-        \Depend\Exception\InvalidArgumentException $except
+        InvalidArgumentException $except
     ) {
-        $this->setClassB($b);
-        $this->setClassC($c);
-        $this->setClassD($d);
-        $this->setName($name);
+        $this->b      = $b;
+        $this->c      = $c;
+        $this->d      = $d;
+        $this->name   = $name;
         $this->except = $except;
         $this->array  = $array;
     }
 
     /**
-     * @param \ClassB $b
+     * @return array
      */
-    public function setClassB($b)
+    public function getArray()
     {
-        $this->b = $b;
+        return $this->array;
     }
 
     /**
-     * @param \ClassC $c
+     * @return ClassB
      */
-    public function setClassC($c)
-    {
-        $this->c = $c;
-    }
-
-    /**
-     * @param \ClassD $d
-     */
-    public function setClassD($d)
-    {
-        $this->d = $d;
-    }
-
-    /**
-     * @return \ClassB
-     */
-    public function getClassB()
+    public function getB()
     {
         return $this->b;
     }
 
     /**
-     * @return \ClassC
+     * @return ClassC
      */
-    public function getClassC()
+    public function getC()
     {
         return $this->c;
     }
 
     /**
-     * @return \ClassD
+     * @return ClassD
      */
-    public function getClassD()
+    public function getD()
     {
         return $this->d;
+    }
+
+    /**
+     * @return Depend\Exception\InvalidArgumentException
+     */
+    public function getExcept()
+    {
+        return $this->except;
     }
 
     /**
@@ -110,13 +104,5 @@ class ClassA
     public function getName()
     {
         return $this->name;
-    }
-
-    /**
-     * @param string $name
-     */
-    public function setName($name)
-    {
-        $this->name = $name;
     }
 }

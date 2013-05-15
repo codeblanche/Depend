@@ -1,11 +1,11 @@
 <?php
 
 require '../bootstrap.php';
-require './fixtures/A.php';
-require './fixtures/B.php';
-require './fixtures/C.php';
-require './fixtures/D.php';
-require './fixtures/E.php';
-require './fixtures/F.php';
-require './fixtures/G.php';
-require './fixtures/H.php';
+require './fixtures/ClassA.php';
+require './fixtures/ClassB.php';
+require './fixtures/ClassC.php';
+require './fixtures/ClassD.php';
+require './fixtures/ClassE.php';
+require './fixtures/ClassOne.php';
+require './fixtures/ClassXA.php';
+require './fixtures/InterfaceOne.php';

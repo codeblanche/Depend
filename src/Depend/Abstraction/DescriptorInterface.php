@@ -29,7 +29,7 @@ interface DescriptorInterface
      *
      * @return DescriptorInterface
      */
-    public function setParams(array $value);
+    public function setParams($value);
 
     /**
      * @return array

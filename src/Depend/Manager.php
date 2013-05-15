@@ -5,6 +5,8 @@ namespace Depend;
 use Depend\Abstraction\DescriptorInterface;
 use Depend\Abstraction\FactoryInterface;
 use Depend\Exception\InvalidArgumentException;
+use Depend\Exception\RuntimeException;
+use ReflectionClass;
 
 class Manager
 {
@@ -61,62 +63,51 @@ class Manager
     }
 
     /**
-     * Add a class descriptor to the managers collection.
+     * Alias for Manager::get($className);
      *
-     * @param DescriptorInterface $descriptor
+     * @param string $className
+     *
+     * @return object
      */
-    public function add(DescriptorInterface $descriptor)
+    public function instance($className)
     {
-        $key                     = $this->makeKey($descriptor->getName());
-        $this->descriptors[$key] = $descriptor;
+        return $this->get($className);
     }
 
     /**
-     * @param string $interface
-     * @param string $class
+     * @param string                $className
+     * @param array                 $params
+     * @param ReflectionClass       $reflectionClass
      *
-     * @return $this
-     */
-    public function alias($interface, $class)
-    {
-        $descriptor = $this->describe($class);
-
-        // TODO: ensure that class implements specified interface.
-
-        $key                     = $this->makeKey($interface);
-        $this->descriptors[$key] = $descriptor;
-
-        return $this;
-    }
-
-    /**
-     * @param string           $className
-     * @param \ReflectionClass $reflectionClass
-     *
+     * @throws Exception\RuntimeException
      * @throws Exception\InvalidArgumentException
-     * @return \DI\Abstraction\DescriptorInterface
+     * @return DescriptorInterface
      */
-    public function describe($className, \ReflectionClass $reflectionClass = null)
+    public function describe($className, $params = null, ReflectionClass $reflectionClass = null)
     {
-        if (!class_exists($className)) {
+        if (!class_exists($className) && !interface_exists($className)) {
             throw new InvalidArgumentException("Class '$className' could not be found");
         }
 
         $key = $this->makeKey($className);
 
         if (isset($this->descriptors[$key])) {
-            return $this->descriptors[$key];
+            return $this->descriptors[$key]->setParams($params);
+        }
+
+        if (!($reflectionClass instanceof ReflectionClass)) {
+            $reflectionClass = new ReflectionClass($className);
+        }
+
+        if ($reflectionClass->isInterface()) {
+            throw new RuntimeException("Given class name '$className' is an interface.\nPlease use the 'Manager::implement({interfaceName}, {className})' method to describe " . "your implementation class.");
         }
 
         $descriptor = clone $this->descriptorPrototype;
 
         $this->descriptors[$key] = $descriptor;
 
-        if (!($reflectionClass instanceof \ReflectionClass)) {
-            $reflectionClass = new \ReflectionClass($className);
-        }
-
-        $descriptor->load($reflectionClass);
+        $descriptor->load($reflectionClass)->setParams($params);
 
         return $descriptor;
     }
@@ -129,5 +120,37 @@ class Manager
     protected function makeKey($className)
     {
         return trim(strtolower($className), '\\');
+    }
+
+    /**
+     * Add a class descriptor to the managers collection.
+     *
+     * @param DescriptorInterface             $descriptor
+     */
+    public function add(DescriptorInterface $descriptor)
+    {
+        $key                     = $this->makeKey($descriptor->getName());
+        $this->descriptors[$key] = $descriptor;
+    }
+
+    /**
+     * @param string $interface
+     * @param string $class
+     *
+     * @throws Exception\InvalidArgumentException
+     * @return DescriptorInterface
+     */
+    public function implement($interface, $class)
+    {
+        $descriptor = $this->describe($class);
+
+        if (!$descriptor->getReflectionClass()->implementsInterface($interface)) {
+            throw new InvalidArgumentException("Given class '$class' does not implement '$interface'");
+        }
+
+        $key                     = $this->makeKey($interface);
+        $this->descriptors[$key] = $descriptor;
+
+        return $descriptor;
     }
 }
