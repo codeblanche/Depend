@@ -2,6 +2,8 @@
 
 namespace Depend;
 
+use Depend\Abstraction\ActionInterface;
+use Depend\Abstraction\InjectorInterface;
 use Depend\Abstraction\DescriptorInterface;
 use Depend\Abstraction\FactoryInterface;
 use Depend\Exception\InvalidArgumentException;
@@ -52,9 +54,32 @@ class Factory implements FactoryInterface
             }
         }
 
-        // TODO: check for callbacks and execute them - also resolveDescriptors for callback parameters.
+        $this->executeActions($this->instances[$class], $descriptor->getActions());
 
         return $this->instances[$class];
+    }
+
+    /**
+     * @param $object
+     * @param $actions
+     */
+    protected function executeActions($object, $actions)
+    {
+        if (!is_array($actions) || empty($actions)) {
+            return;
+        }
+
+        foreach ($actions as $action) {
+            if (!($action instanceof ActionInterface)) {
+                continue;
+            }
+
+            if ($action instanceof InjectorInterface) {
+                $action->setParams($this->resolveDescriptors($action->getParams()));
+            }
+
+            $action->execute($object);
+        }
     }
 
     /**

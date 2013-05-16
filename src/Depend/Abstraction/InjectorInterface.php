@@ -2,14 +2,14 @@
 
 namespace Depend\Abstraction;
 
-interface CallbackInterface extends ActionInterface
+interface InjectorInterface extends ActionInterface
 {
     /**
-     * @param callable $callable
+     * @param string $methodName
      *
-     * @return ActionInterface
+     * @return InjectorInterface
      */
-    public function setCallback($callable);
+    public function setMethodName($methodName);
 
     /**
      * @return array
@@ -19,7 +19,7 @@ interface CallbackInterface extends ActionInterface
     /**
      * @param array $params
      *
-     * @return ActionInterface
+     * @return InjectorInterface
      */
     public function setParams($params);
 }

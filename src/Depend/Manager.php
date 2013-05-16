@@ -51,18 +51,6 @@ class Manager
     }
 
     /**
-     * @param string $className
-     *
-     * @return object
-     */
-    public function get($className)
-    {
-        $descriptor = $this->describe($className);
-
-        return $this->factory->create($descriptor);
-    }
-
-    /**
      * Alias for Manager::get($className);
      *
      * @param string $className
@@ -75,9 +63,21 @@ class Manager
     }
 
     /**
-     * @param string                $className
-     * @param array                 $params
-     * @param ReflectionClass       $reflectionClass
+     * @param string $className
+     *
+     * @return object
+     */
+    public function get($className)
+    {
+        $descriptor = $this->describe($className);
+
+        return $this->factory->create($descriptor);
+    }
+
+    /**
+     * @param string          $className
+     * @param array           $params
+     * @param ReflectionClass $reflectionClass
      *
      * @throws Exception\RuntimeException
      * @throws Exception\InvalidArgumentException
@@ -125,11 +125,14 @@ class Manager
     /**
      * Add a class descriptor to the managers collection.
      *
-     * @param DescriptorInterface             $descriptor
+     * @param DescriptorInterface $descriptor
      */
     public function add(DescriptorInterface $descriptor)
     {
-        $key                     = $this->makeKey($descriptor->getName());
+        $key = $this->makeKey($descriptor->getName());
+
+        $descriptor->setManager($this);
+
         $this->descriptors[$key] = $descriptor;
     }
 

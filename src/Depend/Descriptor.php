@@ -4,6 +4,7 @@ namespace Depend;
 
 use Depend\Abstraction\ActionInterface;
 use Depend\Abstraction\DescriptorInterface;
+use Depend\Exception\InvalidArgumentException;
 use ReflectionClass;
 
 class Descriptor implements DescriptorInterface
@@ -161,7 +162,7 @@ class Descriptor implements DescriptorInterface
      * @param ReflectionClass $class
      *
      * @throws \Exception|\ReflectionException
-     * @return DescriptorInterface
+     * @return Descriptor
      */
     public function load(ReflectionClass $class)
     {
@@ -237,7 +238,7 @@ class Descriptor implements DescriptorInterface
      * @param int|string $identifier
      * @param mixed      $value
      *
-     * @return DescriptorInterface
+     * @return Descriptor
      */
     public function setParam($identifier, $value)
     {
@@ -255,12 +256,35 @@ class Descriptor implements DescriptorInterface
      *
      * @param ActionInterface $action
      *
-     * @return DescriptorInterface
+     * @return Descriptor
      */
     public function addAction(ActionInterface $action)
     {
         $this->actions[] = $action;
 
         return $this;
+    }
+
+    /**
+     * @param ActionInterface[] $actions
+     *
+     * @throws Exception\InvalidArgumentException
+     * @return DescriptorInterface
+     */
+    public function setActions($actions)
+    {
+        if (!is_array($actions)) {
+            throw new InvalidArgumentException('Expected value given to be an array');
+        }
+
+        $this->actions = $actions;
+    }
+
+    /**
+     * @return ActionInterface[]
+     */
+    public function getActions()
+    {
+        return $this->actions;
     }
 }

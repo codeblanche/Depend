@@ -54,21 +54,14 @@ interface DescriptorInterface
     public function setManager(Manager $manager);
 
     /**
-     * Set one of the constructor parameters by identifier (index or name).
-     *
-     * @param int|string $identifier
-     * @param mixed      $value
+     * @param ActionInterface[] $actions
      *
      * @return DescriptorInterface
      */
-    public function setParam($identifier, $value);
+    public function setActions($actions);
 
     /**
-     * Execute the given callback after class instance is created.
-     *
-     * @param ActionInterface $action
-     *
-     * @return DescriptorInterface
+     * @return ActionInterface[]
      */
-    public function addAction(ActionInterface $action);
+    public function getActions();
 }
