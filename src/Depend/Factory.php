@@ -3,10 +3,11 @@
 namespace Depend;
 
 use Depend\Abstraction\ActionInterface;
-use Depend\Abstraction\InjectorInterface;
 use Depend\Abstraction\DescriptorInterface;
 use Depend\Abstraction\FactoryInterface;
+use Depend\Abstraction\InjectorInterface;
 use Depend\Exception\InvalidArgumentException;
+use Depend\Exception\RuntimeException;
 
 class Factory implements FactoryInterface
 {
@@ -37,6 +38,7 @@ class Factory implements FactoryInterface
      * @param DescriptorInterface $descriptor
      * @param bool                $new
      *
+     * @throws Exception\RuntimeException
      * @return object
      */
     protected function get(DescriptorInterface $descriptor, $new = false)
@@ -46,17 +48,50 @@ class Factory implements FactoryInterface
         $params          = $descriptor->getParams();
 
         if (!isset($this->instances[$class]) || $new === true) {
-            $this->instances[$class] = $reflectionClass->newInstanceWithoutConstructor();
-            $constructor             = $this->resolveConstructor($reflectionClass);
+            try {
+                $this->instances[$class] = false;
+                $args                    = $this->resolveDescriptors($params);
+                $instance                = $reflectionClass->newInstanceArgs($args);
+                $this->instances[$class] = $instance;
 
-            if ($constructor instanceof \ReflectionMethod) {
-                $constructor->invokeArgs($this->instances[$class], $this->resolveDescriptors($params));
+                $this->executeActions($instance, $descriptor->getActions());
+            }
+            catch (RuntimeException $e) {
+                if ($e->getCode() === 255) {
+                    throw $e;
+                }
+
+                throw new RuntimeException($e->getMessage(
+                ) . " in '$class'. Please use a dependency setter method to resolve this.", 255);
             }
         }
 
-        $this->executeActions($this->instances[$class], $descriptor->getActions());
+        if ($this->instances[$class] === false) {
+            throw new RuntimeException("Circular dependency found for class '$class'");
+        }
 
         return $this->instances[$class];
+    }
+
+    /**
+     * @param array $params
+     *
+     * @throws Exception\InvalidArgumentException
+     * @return array
+     */
+    protected function resolveDescriptors($params)
+    {
+        if (!is_array($params)) {
+            throw new InvalidArgumentException('Expected an array.');
+        }
+
+        foreach ($params as &$param) {
+            if ($param instanceof DescriptorInterface) {
+                $param = $this->create($param);
+            }
+        }
+
+        return $params;
     }
 
     /**
@@ -96,26 +131,5 @@ class Factory implements FactoryInterface
         }
 
         return $constructor;
-    }
-
-    /**
-     * @param array $params
-     *
-     * @throws Exception\InvalidArgumentException
-     * @return array
-     */
-    protected function resolveDescriptors($params)
-    {
-        if (!is_array($params)) {
-            throw new InvalidArgumentException('Expected an array.');
-        }
-
-        foreach ($params as &$param) {
-            if ($param instanceof DescriptorInterface) {
-                $param = $this->create($param);
-            }
-        }
-
-        return $params;
     }
 }

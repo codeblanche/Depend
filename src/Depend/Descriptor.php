@@ -229,7 +229,7 @@ class Descriptor implements DescriptorInterface
             return null;
         }
 
-        return $this->manager->describe($paramClass->getName(), null, $paramClass);
+        return $this->manager->describe($paramClass->getName(), null, null, $paramClass);
     }
 
     /**
@@ -269,15 +269,17 @@ class Descriptor implements DescriptorInterface
      * @param ActionInterface[] $actions
      *
      * @throws Exception\InvalidArgumentException
-     * @return DescriptorInterface
+     * @return Descriptor
      */
     public function setActions($actions)
     {
         if (!is_array($actions)) {
-            throw new InvalidArgumentException('Expected value given to be an array');
+            return $this;
         }
 
         $this->actions = $actions;
+
+        return $this;
     }
 
     /**

@@ -23,17 +23,23 @@ class ClassB
     protected $e;
 
     /**
-     * @param ClassA $a
      * @param ClassC $c
      * @param ClassD $d
      * @param ClassE $e
      */
-    function __construct(ClassA $a, ClassC $c, ClassD $d, ClassE $e)
+    function __construct(ClassC $c, ClassD $d, ClassE $e)
     {
-        $this->a = $a;
         $this->c = $c;
         $this->d = $d;
         $this->e = $e;
+    }
+
+    /**
+     * @param ClassA $a
+     */
+    public function setA($a)
+    {
+        $this->a = $a;
     }
 
     /**

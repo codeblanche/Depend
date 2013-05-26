@@ -77,13 +77,14 @@ class Manager
     /**
      * @param string          $className
      * @param array           $params
+     * @param array            $actions
      * @param ReflectionClass $reflectionClass
      *
      * @throws Exception\RuntimeException
      * @throws Exception\InvalidArgumentException
      * @return DescriptorInterface
      */
-    public function describe($className, $params = null, ReflectionClass $reflectionClass = null)
+    public function describe($className, $params = null, $actions = null, ReflectionClass $reflectionClass = null)
     {
         if (!class_exists($className) && !interface_exists($className)) {
             throw new InvalidArgumentException("Class '$className' could not be found");
@@ -107,7 +108,7 @@ class Manager
 
         $this->descriptors[$key] = $descriptor;
 
-        $descriptor->load($reflectionClass)->setParams($params);
+        $descriptor->load($reflectionClass)->setParams($params)->setActions($actions);
 
         return $descriptor;
     }
