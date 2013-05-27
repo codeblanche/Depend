@@ -11,8 +11,12 @@ class InjectorFactory
      */
     protected $injectorPrototype;
 
-    public function __construct(InjectorInterface $injectorPrototype)
+    public function __construct(InjectorInterface $injectorPrototype = null)
     {
+        if (!($injectorPrototype instanceof InjectorInterface)) {
+            $injectorPrototype = new Injector();
+        }
+
         $this->injectorPrototype = $injectorPrototype;
     }
 
