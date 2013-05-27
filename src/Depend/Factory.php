@@ -44,15 +44,16 @@ class Factory implements FactoryInterface
     protected function get(DescriptorInterface $descriptor, $new = false)
     {
         $reflectionClass = $descriptor->getReflectionClass();
+        $name            = $descriptor->getName();
         $class           = $reflectionClass->getName();
         $params          = $descriptor->getParams();
 
         if (!isset($this->instances[$class]) || $new === true) {
             try {
-                $this->instances[$class] = false;
+                $this->instances[$name] = false;
                 $args                    = $this->resolveDescriptors($params);
                 $instance                = $reflectionClass->newInstanceArgs($args);
-                $this->instances[$class] = $instance;
+                $this->instances[$name] = $instance;
 
                 $this->executeActions($instance, $descriptor->getActions());
             }
@@ -66,11 +67,11 @@ class Factory implements FactoryInterface
             }
         }
 
-        if ($this->instances[$class] === false) {
+        if ($this->instances[$name] === false) {
             throw new RuntimeException("Circular dependency found for class '$class'");
         }
 
-        return $this->instances[$class];
+        return $this->instances[$name];
     }
 
     /**

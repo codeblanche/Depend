@@ -55,6 +55,11 @@ class Descriptor implements DescriptorInterface
     protected $actions = array();
 
     /**
+     * @var string
+     */
+    protected $name;
+
+    /**
      * @return Manager
      */
     public function getManager()
@@ -125,14 +130,6 @@ class Descriptor implements DescriptorInterface
     }
 
     /**
-     * @return string
-     */
-    public function getName()
-    {
-        return $this->reflectionClass->getName();
-    }
-
-    /**
      * @return ReflectionClass
      */
     public function getReflectionClass()
@@ -169,6 +166,7 @@ class Descriptor implements DescriptorInterface
         $this->reset();
 
         $this->reflectionClass = $class;
+        $this->name            = $this->reflectionClass->getName();
 
         if (!$this->reflectionClass->isInstantiable()) {
             return $this;
@@ -288,5 +286,37 @@ class Descriptor implements DescriptorInterface
     public function getActions()
     {
         return $this->actions;
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return Descriptor
+     */
+    public function setName($name)
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    /**
+     * @param string $name
+     * @param array  $params
+     * @param array  $actions
+     *
+     * @return Descriptor
+     */
+    public function alias($name, $params = null, $actions = null)
+    {
+        return $this->manager->alias($name, $this, $params, $actions);
     }
 }

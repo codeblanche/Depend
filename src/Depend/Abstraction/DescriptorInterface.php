@@ -42,6 +42,13 @@ interface DescriptorInterface
     public function getReflectionClass();
 
     /**
+     * @param string $name
+     *
+     * @return DescriptorInterface
+     */
+    public function setName($name);
+
+    /**
      * @return string
      */
     public function getName();
@@ -64,4 +71,13 @@ interface DescriptorInterface
      * @return ActionInterface[]
      */
     public function getActions();
+
+    /**
+     * @param string $name
+     * @param array  $params
+     * @param array  $actions
+     *
+     * @return DescriptorInterface
+     */
+    public function alias($name, $params = null, $actions = null);
 }

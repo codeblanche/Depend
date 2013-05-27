@@ -53,31 +53,35 @@ class Manager
     /**
      * Alias for Manager::get($className);
      *
-     * @param string $className
+     * @param string $name Class name or alias
      *
      * @return object
      */
-    public function instance($className)
+    public function instance($name)
     {
-        return $this->get($className);
+        return $this->get($name);
     }
 
     /**
-     * @param string $className
+     * @param string $name Class name or alias
      *
      * @return object
      */
-    public function get($className)
+    public function get($name)
     {
-        $descriptor = $this->describe($className);
+        $key = $this->makeKey($name);
 
-        return $this->factory->create($descriptor);
+        if (!isset($this->descriptors[$key])) {
+            $this->describe($name);
+        }
+
+        return $this->factory->create($this->descriptors[$key]);
     }
 
     /**
      * @param string          $className
      * @param array           $params
-     * @param array            $actions
+     * @param array           $actions
      * @param ReflectionClass $reflectionClass
      *
      * @throws Exception\RuntimeException
@@ -86,14 +90,14 @@ class Manager
      */
     public function describe($className, $params = null, $actions = null, ReflectionClass $reflectionClass = null)
     {
-        if (!class_exists($className) && !interface_exists($className)) {
-            throw new InvalidArgumentException("Class '$className' could not be found");
-        }
-
         $key = $this->makeKey($className);
 
         if (isset($this->descriptors[$key])) {
             return $this->descriptors[$key]->setParams($params);
+        }
+
+        if (!class_exists($className) && !interface_exists($className)) {
+            throw new InvalidArgumentException("Class '$className' could not be found");
         }
 
         if (!($reflectionClass instanceof ReflectionClass)) {
@@ -114,13 +118,13 @@ class Manager
     }
 
     /**
-     * @param string $className
+     * @param string $name Class name or alias
      *
      * @return string
      */
-    protected function makeKey($className)
+    protected function makeKey($name)
     {
-        return trim(strtolower($className), '\\');
+        return trim(strtolower($name), '\\');
     }
 
     /**
@@ -139,20 +143,40 @@ class Manager
 
     /**
      * @param string $interface
-     * @param string $class
+     * @param string $name
      *
      * @throws Exception\InvalidArgumentException
      * @return DescriptorInterface
      */
-    public function implement($interface, $class)
+    public function implement($interface, $name)
     {
-        $descriptor = $this->describe($class);
+        $descriptor = $this->describe($name);
 
         if (!$descriptor->getReflectionClass()->implementsInterface($interface)) {
-            throw new InvalidArgumentException("Given class '$class' does not implement '$interface'");
+            throw new InvalidArgumentException("Given class '$name' does not implement '$interface'");
         }
 
         $key                     = $this->makeKey($interface);
+        $this->descriptors[$key] = $descriptor;
+
+        return $descriptor;
+    }
+
+    /**
+     * @param string              $alias
+     * @param DescriptorInterface $prototype
+     * @param array               $params
+     * @param array               $actions
+     *
+     * @return DescriptorInterface
+     */
+    public function alias($alias, DescriptorInterface $prototype, $params = null, $actions = null)
+    {
+        $descriptor = clone $prototype;
+
+        $descriptor->setParams($params)->setActions($actions)->setName($alias);
+
+        $key                     = $this->makeKey($alias);
         $this->descriptors[$key] = $descriptor;
 
         return $descriptor;
