@@ -1,0 +1,30 @@
+{
+    "name"              : "codeblanche/depend",
+    "description"       : "Less Configuration, More Injection",
+    "authors"           : [
+        {
+            "name"  : "Merten van Gerven",
+            "email" : "merten@codeblanche.com"
+        }
+    ],
+    "minimum-stability" : "dev",
+    "license"           : "BSD-3-Clause",
+    "keywords"          : [
+        "DI",
+        "PHP Dependency Injection",
+        "PHP"
+    ],
+    "require-dev": {
+        "phpunit/phpunit": "3.7.*"
+    },
+    "require"           : {
+        "php" : ">=5.3.3"
+    },
+    "autoload"          : {
+        "classmap" : ["./"],
+        "psr-0"    : {
+            "DI" : "src/"
+        }
+    }
+}
+
