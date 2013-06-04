@@ -8,28 +8,23 @@ use ReflectionClass;
 interface DescriptorInterface
 {
     /**
-     * @param ReflectionClass $class
+     * @param string $name
+     * @param array  $params
+     * @param array  $actions
      *
      * @return DescriptorInterface
      */
-    public function load(ReflectionClass $class);
+    public function alias($name, $params = null, $actions = null);
 
     /**
-     * @return boolean
+     * @return ActionInterface[]
      */
-    public function isShared();
+    public function getActions();
 
     /**
-     * @return boolean
+     * @return string
      */
-    public function isCloneable();
-
-    /**
-     * @param array $value
-     *
-     * @return DescriptorInterface
-     */
-    public function setParams($value);
+    public function getName();
 
     /**
      * @return array
@@ -42,23 +37,21 @@ interface DescriptorInterface
     public function getReflectionClass();
 
     /**
-     * @param string $name
+     * @return boolean
+     */
+    public function isCloneable();
+
+    /**
+     * @return boolean
+     */
+    public function isShared();
+
+    /**
+     * @param ReflectionClass $class
      *
      * @return DescriptorInterface
      */
-    public function setName($name);
-
-    /**
-     * @return string
-     */
-    public function getName();
-
-    /**
-     * @param Manager $manager
-     *
-     * @return DescriptorInterface
-     */
-    public function setManager(Manager $manager);
+    public function load(ReflectionClass $class);
 
     /**
      * @param ActionInterface[] $actions
@@ -68,16 +61,30 @@ interface DescriptorInterface
     public function setActions($actions);
 
     /**
-     * @return ActionInterface[]
-     */
-    public function getActions();
-
-    /**
-     * @param string $name
-     * @param array  $params
-     * @param array  $actions
+     * @param boolean $value
      *
      * @return DescriptorInterface
      */
-    public function alias($name, $params = null, $actions = null);
+    public function setIsShared($value);
+
+    /**
+     * @param Manager $manager
+     *
+     * @return DescriptorInterface
+     */
+    public function setManager(Manager $manager);
+
+    /**
+     * @param string $name
+     *
+     * @return DescriptorInterface
+     */
+    public function setName($name);
+
+    /**
+     * @param array $value
+     *
+     * @return DescriptorInterface
+     */
+    public function setParams($value);
 }
