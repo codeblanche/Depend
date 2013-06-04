@@ -2,8 +2,10 @@
 
 namespace Depend;
 
+use Depend\Abstraction\ActionInterface;
 use Depend\Abstraction\DescriptorInterface;
 use Depend\Abstraction\FactoryInterface;
+use Depend\Abstraction\InjectorInterface;
 use Depend\Exception\InvalidArgumentException;
 use Depend\Exception\RuntimeException;
 use ReflectionClass;
@@ -11,9 +13,24 @@ use ReflectionClass;
 class Manager
 {
     /**
+     * @var DescriptorInterface
+     */
+    protected $descriptorPrototype;
+
+    /**
      * @var DescriptorInterface[]
      */
     protected $descriptors = array();
+
+    /**
+     * @var FactoryInterface
+     */
+    protected $factory;
+
+    /**
+     * @var object[]
+     */
+    protected $instances = array();
 
     /**
      * @var DescriptorInterface[]
@@ -21,14 +38,9 @@ class Manager
     protected $named = array();
 
     /**
-     * @var DescriptorInterface
+     * @var array Queue to aid in the fight against circular dependencies.
      */
-    protected $descriptorPrototype;
-
-    /**
-     * @var FactoryInterface
-     */
-    protected $factory;
+    protected $queue = array();
 
     /**
      * @param FactoryInterface    $factory
@@ -48,34 +60,50 @@ class Manager
         $this->factory             = $factory;
 
         $this->descriptorPrototype->setManager($this);
+
+        $this->implement('Depend\Abstraction\FactoryInterface', 'Depend\Factory');
+        $this->implement('Depend\Abstraction\DescriptorInterface', 'Depend\Descriptor')->setIsShared(false);
+
+        $this->describe('Depend\Manager');
+
+        $this
+            ->set('Depend\Manager', $this)
+            ->set('Depend\Factory', $factory)
+            ->set('Depend\Descriptor', $descriptorPrototype);
     }
 
     /**
-     * Alias for Manager::get($className);
+     * Add a class descriptor to the managers collection.
      *
-     * @param string $name Class name or alias
-     *
-     * @return object
+     * @param Abstraction\DescriptorInterface $descriptor
      */
-    public function instance($name)
+    public function add(DescriptorInterface $descriptor)
     {
-        return $this->get($name);
+        $key = $this->makeKey($descriptor->getName());
+
+        $descriptor->setManager($this);
+
+        $this->descriptors[$key] = $descriptor;
     }
 
     /**
-     * @param string $name Class name or alias
+     * @param string              $alias
+     * @param DescriptorInterface $prototype
+     * @param array               $params
+     * @param array               $actions
      *
-     * @return object
+     * @return DescriptorInterface
      */
-    public function get($name)
+    public function alias($alias, DescriptorInterface $prototype, $params = null, $actions = null)
     {
-        $key = $this->makeKey($name);
+        $descriptor = clone $prototype;
 
-        if (!isset($this->descriptors[$key])) {
-            $this->describe($name);
-        }
+        $descriptor->setParams($params)->setActions($actions)->setName($alias);
 
-        return $this->factory->create($this->descriptors[$key]);
+        $key                     = $this->makeKey($alias);
+        $this->descriptors[$key] = $descriptor;
+
+        return $descriptor;
     }
 
     /**
@@ -120,25 +148,30 @@ class Manager
     /**
      * @param string $name Class name or alias
      *
-     * @return string
+     * @return object
      */
-    protected function makeKey($name)
+    public function get($name)
     {
-        return trim(strtolower($name), '\\');
-    }
+        $descriptor = $this->describe($name);
+        $key        = $this->makeKey($name);
 
-    /**
-     * Add a class descriptor to the managers collection.
-     *
-     * @param DescriptorInterface $descriptor
-     */
-    public function add(DescriptorInterface $descriptor)
-    {
-        $key = $this->makeKey($descriptor->getName());
+        if (!isset($this->instances[$key])) {
+            $this->create($name);
+        }
 
-        $descriptor->setManager($this);
+        if ($descriptor->isShared()) {
+            return $this->instances[$key];
+        }
 
-        $this->descriptors[$key] = $descriptor;
+        if ($descriptor->isCloneable()) {
+            return clone $this->instances[$key];
+        }
+
+        $instance = $this->instances[$key];
+
+        unset($this->instances[$key]);
+
+        return $instance;
     }
 
     /**
@@ -163,22 +196,106 @@ class Manager
     }
 
     /**
-     * @param string              $alias
-     * @param DescriptorInterface $prototype
-     * @param array               $params
-     * @param array               $actions
+     * Resolve an array of mixed parameters and possible Descriptors.
      *
-     * @return DescriptorInterface
+     * @param array $params
+     *
+     * @return array
      */
-    public function alias($alias, DescriptorInterface $prototype, $params = null, $actions = null)
+    public function resolveParams($params)
     {
-        $descriptor = clone $prototype;
+        $resolved = array();
 
-        $descriptor->setParams($params)->setActions($actions)->setName($alias);
+        foreach ($params as $param) {
+            if ($param instanceof DescriptorInterface) {
+                $resolved[] = $this->get($param->getName());
 
-        $key                     = $this->makeKey($alias);
-        $this->descriptors[$key] = $descriptor;
+                continue;
+            }
 
-        return $descriptor;
+            $resolved[] = $param;
+        }
+
+        return $resolved;
+    }
+
+    /**
+     * Store an instance for injection by class name or alias.
+     *
+     * @param string $name Class name or alias
+     * @param object $instance
+     *
+     * @return $this
+     */
+    public function set($name, $instance)
+    {
+        $key = $this->makeKey($name);
+
+        $this->instances[$key] = $instance;
+
+        return $this;
+    }
+
+    /**
+     * Create an instance of the given class name or alias
+     *
+     * @param string $name Class name or alias
+     *
+     * @throws Exception\RuntimeException
+     */
+    protected function create($name)
+    {
+        $descriptor = $this->describe($name);
+        $key        = $this->makeKey($name);
+        $class      = $descriptor->getReflectionClass()->getName();
+
+        if (in_array($class, $this->queue)) {
+            $parent = end($this->queue);
+
+            throw new RuntimeException("Circular dependency found for class '$class' in class '$parent'. Please use a setter method to resolve this.");
+        }
+
+        array_push($this->queue, $class);
+
+        $this->instances[$key] = $this->factory->create($descriptor, $this);
+
+        array_pop($this->queue);
+
+        $this->executeActions($descriptor->getActions(), $this->instances[$key]);
+    }
+
+    /**
+     * @param array  $actions
+     * @param object $instance
+     */
+    protected function executeActions($actions, $instance)
+    {
+        if (!is_array($actions) || empty($actions)) {
+            return;
+        }
+
+        foreach ($actions as $action) {
+            if (!($action instanceof ActionInterface)) {
+                continue;
+            }
+
+            if ($action instanceof InjectorInterface) {
+                $action->setParams($this->resolveParams($action->getParams()));
+            }
+
+            $action->execute($instance);
+        }
+
+        return;
+    }
+
+    /**
+     * @param string $name Class name or alias
+     *
+     * @return string
+     */
+    protected function makeKey($name)
+    {
+        return trim(strtolower($name), '\\');
     }
 }

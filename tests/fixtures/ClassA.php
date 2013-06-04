@@ -1,9 +1,15 @@
 <?php
 
 use Depend\Exception\InvalidArgumentException;
+use Depend\Manager;
 
 class ClassA
 {
+    /**
+     * @var array
+     */
+    protected $array;
+
     /**
      * @var ClassB
      */
@@ -20,49 +26,22 @@ class ClassA
     protected $d;
 
     /**
-     * @var string
-     */
-    protected $name;
-
-    /**
-     * @var array
-     */
-    protected $array;
-
-    /**
-     * @var Depend\Exception\InvalidArgumentException
-     */
-    protected $except;
-
-    /**
-     * @param ClassC                                         $c
-     * @param ClassD                                         $d
-     * @param string                                         $name
-     * @param array                                          $array
-     * @param Depend\Exception\InvalidArgumentException      $except
+     * @param ClassC         $c
+     * @param ClassD         $d
+     * @param string         $name
+     * @param array          $array
      */
     function __construct(
         ClassC $c,
         ClassD $d,
         $name,
-        $array,
-        InvalidArgumentException $except
+        $array
     ) {
-        $this->c      = $c;
-        $this->d      = $d;
-        $this->name   = $name;
-        $this->except = $except;
-        $this->array  = $array;
+        $this->c       = $c;
+        $this->d       = $d;
+        $this->name    = $name;
+        $this->array   = $array;
     }
-
-    /**
-     * @param ClassB $b
-     */
-    public function setB($b)
-    {
-        $this->b = $b;
-    }
-
 
     /**
      * @return array
@@ -110,5 +89,13 @@ class ClassA
     public function getName()
     {
         return $this->name;
+    }
+
+    /**
+     * @param ClassB $b
+     */
+    public function setB($b)
+    {
+        $this->b = $b;
     }
 }
