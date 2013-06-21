@@ -221,15 +221,23 @@ class Descriptor implements DescriptorInterface
         try {
             $paramClass = $param->getClass();
         }
-        catch (\ReflectionException $e) {
-            print_r($e->getTrace());
-        }
+        catch (\ReflectionException $e) {}
 
         if (!($paramClass instanceof ReflectionClass)) {
-            return null;
+            return $this->resolveArgumentDefaultValue($param);
         }
 
         return $this->manager->describe($paramClass->getName(), null, null, $paramClass);
+    }
+
+    protected function resolveArgumentDefaultValue(\ReflectionParameter $param)
+    {
+        try {
+            return $param->getDefaultValue();
+        }
+        catch(\ReflectionException $e) {
+            return null;
+        }
     }
 
     /**
