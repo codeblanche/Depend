@@ -66,10 +66,10 @@ class Manager
 
         $this->describe('Depend\Manager');
 
-        $this
-            ->set('Depend\Manager', $this)
-            ->set('Depend\Factory', $factory)
-            ->set('Depend\Descriptor', $descriptorPrototype);
+        $this->set('Depend\Manager', $this)->set('Depend\Factory', $factory)->set(
+            'Depend\Descriptor',
+            $descriptorPrototype
+        );
     }
 
     /**
@@ -147,16 +147,24 @@ class Manager
 
     /**
      * @param string $name Class name or alias
+     * @param array  $paramsOverride
      *
      * @return object
      */
-    public function get($name)
+    public function get($name, $paramsOverride = null)
     {
         $descriptor = $this->describe($name);
         $key        = $this->makeKey($name);
 
+        if (is_array($paramsOverride) && !empty($paramsOverride)) {
+            $descriptor = clone $descriptor;
+            $descriptor->setParams($paramsOverride);
+
+            return $this->create($descriptor);
+        }
+
         if (!isset($this->instances[$key])) {
-            $this->create($name);
+            $this->create($descriptor, $this->instances[$key]);
         }
 
         if ($descriptor->isShared()) {
@@ -237,17 +245,18 @@ class Manager
     }
 
     /**
-     * Create an instance of the given class name or alias
+     * Create an instance of the given class descriptor
      *
-     * @param string $name Class name or alias
+     * @param Abstraction\DescriptorInterface $descriptor
+     * @param object $instance
      *
      * @throws Exception\RuntimeException
+     * @internal param $store
+     * @return object
      */
-    protected function create($name)
+    protected function create(DescriptorInterface $descriptor, &$instance = null)
     {
-        $descriptor = $this->describe($name);
-        $key        = $this->makeKey($name);
-        $class      = $descriptor->getReflectionClass()->getName();
+        $class = $descriptor->getReflectionClass()->getName();
 
         if (in_array($class, $this->queue)) {
             $parent = end($this->queue);
@@ -257,11 +266,13 @@ class Manager
 
         array_push($this->queue, $class);
 
-        $this->instances[$key] = $this->factory->create($descriptor, $this);
+        $instance = $this->factory->create($descriptor, $this);
 
         array_pop($this->queue);
 
-        $this->executeActions($descriptor->getActions(), $this->instances[$key]);
+        $this->executeActions($descriptor->getActions(), $instance);
+
+        return $instance;
     }
 
     /**
