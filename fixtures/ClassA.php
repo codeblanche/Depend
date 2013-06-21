@@ -26,19 +26,27 @@ class ClassA
     protected $d;
 
     /**
-     * @param ClassC         $c
-     * @param ClassD         $d
-     * @param string         $name
-     * @param array          $array
+     * @var ClassF
+     */
+    protected $f;
+
+    /**
+     * @param ClassC $c
+     * @param ClassD $d
+     * @param ClassF $f
+     * @param string $name
+     * @param array  $array
      */
     function __construct(
         ClassC $c,
         ClassD $d,
+        ClassF $f,
         $name,
         $array
     ) {
         $this->c       = $c;
         $this->d       = $d;
+        $this->f       = $f;
         $this->name    = $name;
         $this->array   = $array;
     }
