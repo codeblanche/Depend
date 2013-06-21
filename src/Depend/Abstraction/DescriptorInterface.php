@@ -65,6 +65,13 @@ interface DescriptorInterface
      *
      * @return DescriptorInterface
      */
+    public function setIsCloneable($value);
+
+    /**
+     * @param boolean $value
+     *
+     * @return DescriptorInterface
+     */
     public function setIsShared($value);
 
     /**

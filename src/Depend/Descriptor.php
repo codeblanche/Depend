@@ -5,6 +5,7 @@ namespace Depend;
 use Depend\Abstraction\ActionInterface;
 use Depend\Abstraction\DescriptorInterface;
 use Depend\Exception\InvalidArgumentException;
+use Depend\Exception\RuntimeException;
 use ReflectionClass;
 
 class Descriptor implements DescriptorInterface
@@ -12,7 +13,17 @@ class Descriptor implements DescriptorInterface
     /**
      * @var array
      */
-    protected $params = array();
+    protected $actions = array();
+
+    /**
+     * @var \ReflectionParameter[]
+     */
+    protected $constructorParams = array();
+
+    /**
+     * @var boolean
+     */
+    protected $isCloneable = true;
 
     /**
      * @var boolean
@@ -20,9 +31,24 @@ class Descriptor implements DescriptorInterface
     protected $isShared = true;
 
     /**
-     * @var boolean
+     * @var Manager
      */
-    protected $isCloneable = true;
+    protected $manager;
+
+    /**
+     * @var string
+     */
+    protected $name;
+
+    /**
+     * @var array
+     */
+    protected $paramNames = array();
+
+    /**
+     * @var array
+     */
+    protected $params = array();
 
     /**
      * @var ReflectionClass
@@ -35,29 +61,38 @@ class Descriptor implements DescriptorInterface
     protected $reflectionConstructor;
 
     /**
-     * @var \ReflectionParameter[]
+     * Execute the given callback after class instance is created.
+     *
+     * @param ActionInterface $action
+     *
+     * @return Descriptor
      */
-    protected $constructorParams = array();
+    public function addAction(ActionInterface $action)
+    {
+        $this->actions[] = $action;
+
+        return $this;
+    }
 
     /**
-     * @var Manager
+     * @param string $name
+     * @param array  $params
+     * @param array  $actions
+     *
+     * @return Descriptor
      */
-    protected $manager;
+    public function alias($name, $params = null, $actions = null)
+    {
+        return $this->manager->alias($name, $this, $params, $actions);
+    }
 
     /**
-     * @var array
+     * @return ActionInterface[]
      */
-    protected $paramNames = array();
-
-    /**
-     * @var array
-     */
-    protected $actions = array();
-
-    /**
-     * @var string
-     */
-    protected $name;
+    public function getActions()
+    {
+        return $this->actions;
+    }
 
     /**
      * @return Manager
@@ -68,39 +103,11 @@ class Descriptor implements DescriptorInterface
     }
 
     /**
-     * @param Manager $manager
-     *
-     * @return DescriptorInterface
+     * @return string
      */
-    public function setManager(Manager $manager)
+    public function getName()
     {
-        $this->manager = $manager;
-
-        return $this;
-    }
-
-    /**
-     * @param boolean $value
-     *
-     * @return DescriptorInterface
-     */
-    public function setIsCloneable($value)
-    {
-        $this->isCloneable = (boolean) $value;
-
-        return $this;
-    }
-
-    /**
-     * @param boolean $value
-     *
-     * @return DescriptorInterface
-     */
-    public function setIsShared($value)
-    {
-        $this->isShared = (boolean) $value;
-
-        return $this;
+        return $this->name;
     }
 
     /**
@@ -109,24 +116,6 @@ class Descriptor implements DescriptorInterface
     public function getParams()
     {
         return $this->params;
-    }
-
-    /**
-     * @param array $value
-     *
-     * @return DescriptorInterface
-     */
-    public function setParams($value)
-    {
-        if (!is_array($value)) {
-            return $this;
-        }
-
-        foreach ($value as $identifier => $param) {
-            $this->setParam($identifier, $param);
-        }
-
-        return $this;
     }
 
     /**
@@ -180,7 +169,7 @@ class Descriptor implements DescriptorInterface
 
         $params = $this->reflectionConstructor->getParameters();
 
-        if (is_null($params)) {
+        if (empty($params)) {
             return $this;
         }
 
@@ -192,83 +181,6 @@ class Descriptor implements DescriptorInterface
         }
 
         $this->constructorParams = $params;
-
-        return $this;
-    }
-
-    /**
-     * Reset all properties
-     */
-    protected function reset()
-    {
-        $this->params                = array();
-        $this->isShared              = true;
-        $this->isCloneable           = true;
-        $this->reflectionClass       = null;
-        $this->reflectionConstructor = null;
-        $this->constructorParams     = array();
-    }
-
-    /**
-     * @param \ReflectionParameter $param
-     *
-     * @return mixed
-     */
-    protected function resolveArgumentValue(\ReflectionParameter $param)
-    {
-        $paramClass = null;
-
-        try {
-            $paramClass = $param->getClass();
-        }
-        catch (\ReflectionException $e) {}
-
-        if (!($paramClass instanceof ReflectionClass)) {
-            return $this->resolveArgumentDefaultValue($param);
-        }
-
-        return $this->manager->describe($paramClass->getName(), null, null, $paramClass);
-    }
-
-    protected function resolveArgumentDefaultValue(\ReflectionParameter $param)
-    {
-        try {
-            return $param->getDefaultValue();
-        }
-        catch(\ReflectionException $e) {
-            return null;
-        }
-    }
-
-    /**
-     * Set one of the constructor parameters by identifier (index or name).
-     *
-     * @param int|string $identifier
-     * @param mixed      $value
-     *
-     * @return Descriptor
-     */
-    public function setParam($identifier, $value)
-    {
-        if (is_numeric($identifier) && isset($this->paramNames[$identifier])) {
-            $identifier = $this->paramNames[$identifier];
-        }
-
-        $this->params[$identifier] = $value;
-
-        return $this;
-    }
-
-    /**
-     * Execute the given callback after class instance is created.
-     *
-     * @param ActionInterface $action
-     *
-     * @return Descriptor
-     */
-    public function addAction(ActionInterface $action)
-    {
-        $this->actions[] = $action;
 
         return $this;
     }
@@ -291,11 +203,39 @@ class Descriptor implements DescriptorInterface
     }
 
     /**
-     * @return ActionInterface[]
+     * @param boolean $value
+     *
+     * @return DescriptorInterface
      */
-    public function getActions()
+    public function setIsCloneable($value)
     {
-        return $this->actions;
+        $this->isCloneable = (boolean) $value;
+
+        return $this;
+    }
+
+    /**
+     * @param boolean $value
+     *
+     * @return DescriptorInterface
+     */
+    public function setIsShared($value)
+    {
+        $this->isShared = (boolean) $value;
+
+        return $this;
+    }
+
+    /**
+     * @param Manager $manager
+     *
+     * @return DescriptorInterface
+     */
+    public function setManager(Manager $manager)
+    {
+        $this->manager = $manager;
+
+        return $this;
     }
 
     /**
@@ -311,22 +251,90 @@ class Descriptor implements DescriptorInterface
     }
 
     /**
-     * @return string
-     */
-    public function getName()
-    {
-        return $this->name;
-    }
-
-    /**
-     * @param string $name
-     * @param array  $params
-     * @param array  $actions
+     * Set one of the constructor parameters by identifier (index or name).
+     *
+     * @param int|string $identifier
+     * @param mixed      $value
      *
      * @return Descriptor
      */
-    public function alias($name, $params = null, $actions = null)
+    public function setParam($identifier, $value)
     {
-        return $this->manager->alias($name, $this, $params, $actions);
+        if (is_numeric($identifier) && isset($this->paramNames[$identifier])) {
+            $identifier = $this->paramNames[$identifier];
+        }
+
+        $this->params[$identifier] = $value;
+
+        return $this;
+    }
+
+    /**
+     * @param array $value
+     *
+     * @return DescriptorInterface
+     */
+    public function setParams($value)
+    {
+        if (!is_array($value)) {
+            return $this;
+        }
+
+        foreach ($value as $identifier => $param) {
+            $this->setParam($identifier, $param);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Reset all properties
+     */
+    protected function reset()
+    {
+        $this->params                = array();
+        $this->isShared              = true;
+        $this->isCloneable           = true;
+        $this->reflectionClass       = null;
+        $this->reflectionConstructor = null;
+        $this->constructorParams     = array();
+    }
+
+    protected function resolveArgumentDefaultValue(\ReflectionParameter $param)
+    {
+        try {
+            return $param->getDefaultValue();
+        }
+        catch (\ReflectionException $e) {
+            return null;
+        }
+    }
+
+    /**
+     * @param \ReflectionParameter $param
+     *
+     * @throws Exception\RuntimeException
+     * @return mixed
+     */
+    protected function resolveArgumentValue(\ReflectionParameter $param)
+    {
+        $paramClass = null;
+
+        try {
+            $paramClass = $param->getClass();
+        }
+        catch (\ReflectionException $e) {
+        }
+
+        if (!($paramClass instanceof ReflectionClass)) {
+            return $this->resolveArgumentDefaultValue($param);
+        }
+
+        if (!($this->manager instanceof Manager)) {
+            throw new RuntimeException("Unable to retrieve descriptor for class '{$paramClass->getName()}' " .
+            "because the manager has not been set. Please use Descriptor::setManager to resolve this.");
+        }
+
+        return $this->manager->describe($paramClass->getName(), null, null, $paramClass);
     }
 }

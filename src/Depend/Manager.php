@@ -62,14 +62,16 @@ class Manager
         $this->descriptorPrototype->setManager($this);
 
         $this->implement('Depend\Abstraction\FactoryInterface', 'Depend\Factory');
-        $this->implement('Depend\Abstraction\DescriptorInterface', 'Depend\Descriptor')->setIsShared(false);
+        $this
+            ->implement('Depend\Abstraction\DescriptorInterface', 'Depend\Descriptor')
+            ->setIsShared(false);
 
         $this->describe('Depend\Manager');
 
-        $this->set('Depend\Manager', $this)->set('Depend\Factory', $factory)->set(
-            'Depend\Descriptor',
-            $descriptorPrototype
-        );
+        $this
+            ->set('Depend\Manager', $this)
+            ->set('Depend\Factory', $factory)
+            ->set('Depend\Descriptor', $descriptorPrototype);
     }
 
     /**
@@ -98,7 +100,10 @@ class Manager
     {
         $descriptor = clone $prototype;
 
-        $descriptor->setParams($params)->setActions($actions)->setName($alias);
+        $descriptor
+            ->setParams($params)
+            ->setActions($actions)
+            ->setName($alias);
 
         $key                     = $this->makeKey($alias);
         $this->descriptors[$key] = $descriptor;
@@ -133,14 +138,19 @@ class Manager
         }
 
         if ($reflectionClass->isInterface()) {
-            throw new RuntimeException("Given class name '$className' is an interface.\nPlease use the 'Manager::implement({interfaceName}, {className})' method to describe " . "your implementation class.");
+            throw new RuntimeException("Given class name '$className' is an interface.\nPlease use the " .
+            "'Manager::implement({interfaceName}, {className})' method to describe your implementation " .
+            "class.");
         }
 
         $descriptor = clone $this->descriptorPrototype;
 
         $this->descriptors[$key] = $descriptor;
 
-        $descriptor->load($reflectionClass)->setParams($params)->setActions($actions);
+        $descriptor
+            ->load($reflectionClass)
+            ->setParams($params)
+            ->setActions($actions);
 
         return $descriptor;
     }
@@ -155,6 +165,7 @@ class Manager
     {
         $descriptor = $this->describe($name);
         $key        = $this->makeKey($name);
+        $instance   = null;
 
         if (is_array($paramsOverride) && !empty($paramsOverride)) {
             $descriptor = clone $descriptor;
@@ -164,7 +175,7 @@ class Manager
         }
 
         if (!isset($this->instances[$key])) {
-            $this->create($descriptor, $this->instances[$key]);
+            $instance = $this->create($descriptor, $this->instances[$key]);
         }
 
         if ($descriptor->isShared()) {
@@ -175,7 +186,9 @@ class Manager
             return clone $this->instances[$key];
         }
 
-        $instance = $this->instances[$key];
+        if (is_null($instance)) {
+            $instance = $this->create($descriptor);
+        }
 
         unset($this->instances[$key]);
 
@@ -233,11 +246,13 @@ class Manager
      * @param string $name Class name or alias
      * @param object $instance
      *
-     * @return $this
+     * @return Manager
      */
     public function set($name, $instance)
     {
         $key = $this->makeKey($name);
+
+        $this->alias($name, $this->describe(get_class($instance)));
 
         $this->instances[$key] = $instance;
 
@@ -248,10 +263,9 @@ class Manager
      * Create an instance of the given class descriptor
      *
      * @param Abstraction\DescriptorInterface $descriptor
-     * @param object $instance
+     * @param object                          $instance
      *
      * @throws Exception\RuntimeException
-     * @internal param $store
      * @return object
      */
     protected function create(DescriptorInterface $descriptor, &$instance = null)
@@ -261,7 +275,8 @@ class Manager
         if (in_array($class, $this->queue)) {
             $parent = end($this->queue);
 
-            throw new RuntimeException("Circular dependency found for class '$class' in class '$parent'. Please use a setter method to resolve this.");
+            throw new RuntimeException("Circular dependency found for class '$class' in class '$parent'. Please " .
+            "use a setter method to resolve this.");
         }
 
         array_push($this->queue, $class);

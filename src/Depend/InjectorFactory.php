@@ -22,14 +22,18 @@ class InjectorFactory
 
     /**
      * @param string $methodName
-     * @param mixed  $value
+     * @param array  $params
      *
      * @return InjectorInterface
      */
-    public function create($methodName, $value)
+    public function create($methodName, $params)
     {
         $newInstance = clone $this->injectorPrototype;
 
-        return $newInstance->setMethodName($methodName)->setParams(array($value));
+        if (!is_array($params)) {
+            $params = array($params);
+        }
+
+        return $newInstance->setMethodName($methodName)->setParams($params);
     }
 }
