@@ -216,6 +216,8 @@ class Descriptor implements DescriptorInterface
      */
     protected function resolveArgumentValue(\ReflectionParameter $param)
     {
+        $paramClass = null;
+
         try {
             $paramClass = $param->getClass();
         }
