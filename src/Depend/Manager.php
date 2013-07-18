@@ -94,7 +94,7 @@ class Manager
      * @param array               $params
      * @param array               $actions
      *
-     * @return DescriptorInterface
+     * @return Descriptor|DescriptorInterface
      */
     public function alias($alias, DescriptorInterface $prototype, $params = null, $actions = null)
     {
@@ -119,7 +119,7 @@ class Manager
      *
      * @throws Exception\RuntimeException
      * @throws Exception\InvalidArgumentException
-     * @return DescriptorInterface
+     * @return Descriptor|DescriptorInterface
      */
     public function describe($className, $params = null, $actions = null, ReflectionClass $reflectionClass = null)
     {
@@ -200,7 +200,7 @@ class Manager
      * @param string $name
      *
      * @throws Exception\InvalidArgumentException
-     * @return DescriptorInterface
+     * @return Descriptor|DescriptorInterface
      */
     public function implement($interface, $name)
     {
