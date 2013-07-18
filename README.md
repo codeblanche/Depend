@@ -38,7 +38,7 @@ This project has been setup to be PHP 5.3.3 compatible and composer friendly.
 
 ## Installation
 
-Add `"codeblanche/entity": "v1.*"` to the `require` section of your projects composer.json file.
+Add `"codeblanche/entity": "1.*"` to the `require` section of your projects composer.json file.
 
 ## Simplest usage possible
 
