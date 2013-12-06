@@ -24,9 +24,12 @@ class Factory implements FactoryInterface
             throw new RuntimeException("Class '$class' is is not instantiable");
         }
 
-        $args     = $manager->resolveParams($descriptor->getParams());
-        $instance = $reflectionClass->newInstanceArgs($args);
+        $args = $manager->resolveParams($descriptor->getParams());
 
-        return $instance;
+        if (empty($args)) {
+            return $instance = $reflectionClass->newInstance();
+        }
+
+        return $instance = $reflectionClass->newInstanceArgs($args);
     }
 }
