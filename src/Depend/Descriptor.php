@@ -300,14 +300,19 @@ class Descriptor implements DescriptorInterface
         $this->constructorParams     = array();
     }
 
+    /**
+     * @param \ReflectionParameter $param
+     *
+     * @return mixed
+     */
     protected function resolveArgumentDefaultValue(\ReflectionParameter $param)
     {
-        try {
-            return $param->getDefaultValue();
-        }
-        catch (\ReflectionException $e) {
+        if (!$param->isDefaultValueAvailable()) {
             return null;
         }
+
+        return $param->getDefaultValue();
+
     }
 
     /**
