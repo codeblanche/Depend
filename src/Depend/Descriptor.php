@@ -326,7 +326,7 @@ class Descriptor implements DescriptorInterface
         catch (\ReflectionException $e) {
         }
 
-        if (!($paramClass instanceof ReflectionClass)) {
+        if (!($paramClass instanceof ReflectionClass) || $param->isDefaultValueAvailable()) {
             return $this->resolveArgumentDefaultValue($param);
         }
 
