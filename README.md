@@ -93,7 +93,21 @@ try {
      * \Depend\Abstraction\InjectorInterface implementation
      * as the first and only optional argument.
      */
-    $if = new \Depend\InjectorFactory();
+    /** @var $if \Depend\InjectorFactory */
+    $if = $dm->get('\Depend\InjectorFactory');
+
+    /*
+     * Load a module that implements \Depend\Abstraction\ModuleInterface
+     * to defer configuration of classes and implementation to independent
+     * modules.
+     *
+     * Our recommendation is to include a /Depend/Module.php within your module
+     * root.
+     *
+     * Note: Module order does matter. Modules loaded later may override
+     * implementation and definitions created in prior loaded modules.
+     */
+    $dm->module('\My\Own\Custom\Module\Depend\Module');
 
     /*
      * Tell the manager that any dependencies on InterfaceOne

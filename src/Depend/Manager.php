@@ -6,6 +6,7 @@ use Depend\Abstraction\ActionInterface;
 use Depend\Abstraction\DescriptorInterface;
 use Depend\Abstraction\FactoryInterface;
 use Depend\Abstraction\InjectorInterface;
+use Depend\Abstraction\ModuleInterface;
 use Depend\Exception\InvalidArgumentException;
 use Depend\Exception\RuntimeException;
 use ReflectionClass;
@@ -62,16 +63,41 @@ class Manager
         $this->descriptorPrototype->setManager($this);
 
         $this->implement('Depend\Abstraction\FactoryInterface', 'Depend\Factory');
-        $this
-            ->implement('Depend\Abstraction\DescriptorInterface', 'Depend\Descriptor')
-            ->setIsShared(false);
-
+        $this->implement('Depend\Abstraction\DescriptorInterface', 'Depend\Descriptor')->setIsShared(false);
+        $this->implement('Depend\Abstraction\InjectorInterface', 'Depend\Injector');
         $this->describe('Depend\Manager');
+        $this->set('Depend\Manager', $this);
+        $this->set('Depend\Factory', $factory);
+        $this->set('Depend\Descriptor', $descriptorPrototype);
+    }
 
-        $this
-            ->set('Depend\Manager', $this)
-            ->set('Depend\Factory', $factory)
-            ->set('Depend\Descriptor', $descriptorPrototype);
+    /**
+     * Register a module object or class to register it's own dependencies.
+     *
+     * @param ModuleInterface|string $module
+     *
+     * @return $this
+     * @throws Exception\InvalidArgumentException
+     */
+    public function module($module)
+    {
+        if (is_object($module)) {
+            if (!($module instanceof ModuleInterface)) {
+                $moduleType = get_class($module);
+
+                throw new InvalidArgumentException("Given module object '$moduleType' does not implement 'Depend\\Abstraction\\ModuleInterface'");
+            }
+
+            $module->register($this);
+
+            return $this;
+        }
+
+        if (!class_exists((string) $module)) {
+            throw new InvalidArgumentException("Given class name '$module' could not be found");
+        }
+
+        return $this->module(new $module);
     }
 
     /**
@@ -100,10 +126,7 @@ class Manager
     {
         $descriptor = clone $prototype;
 
-        $descriptor
-            ->setParams($params)
-            ->setActions($actions)
-            ->setName($alias);
+        $descriptor->setParams($params)->setActions($actions)->setName($alias);
 
         $key                     = $this->makeKey($alias);
         $this->descriptors[$key] = $descriptor;
@@ -138,19 +161,14 @@ class Manager
         }
 
         if ($reflectionClass->isInterface()) {
-            throw new RuntimeException("Given class name '$className' is an interface.\nPlease use the " .
-            "'Manager::implement({interfaceName}, {className})' method to describe your implementation " .
-            "class.");
+            throw new RuntimeException("Given class name '$className' is an interface.\nPlease use the 'Manager::implement({interfaceName}, {className})' method to describe your implementation class.");
         }
 
         $descriptor = clone $this->descriptorPrototype;
 
         $this->descriptors[$key] = $descriptor;
 
-        $descriptor
-            ->load($reflectionClass)
-            ->setParams($params)
-            ->setActions($actions);
+        $descriptor->load($reflectionClass)->setParams($params)->setActions($actions);
 
         return $descriptor;
     }
@@ -275,8 +293,7 @@ class Manager
         if (in_array($class, $this->queue)) {
             $parent = end($this->queue);
 
-            throw new RuntimeException("Circular dependency found for class '$class' in class '$parent'. Please " .
-            "use a setter method to resolve this.");
+            throw new RuntimeException("Circular dependency found for class '$class' in class '$parent'. Please use a setter method to resolve this.");
         }
 
         array_push($this->queue, $class);
