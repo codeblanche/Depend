@@ -149,7 +149,14 @@ class Manager
         $key = $this->makeKey($className);
 
         if (isset($this->descriptors[$key])) {
-            return $this->descriptors[$key]->setParams($params);
+            $descriptor = $this->descriptors[$key];
+            $descriptor->setParams($params);
+
+            if (!is_null($actions)) {
+                $descriptor->setActions($actions);
+            }
+
+            return $descriptor;
         }
 
         if (!class_exists($className) && !interface_exists($className)) {
