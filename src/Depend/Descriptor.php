@@ -23,7 +23,7 @@ class Descriptor implements DescriptorInterface
     /**
      * @var boolean
      */
-    protected $isCloneable = true;
+    protected $isCloneable = false;
 
     /**
      * @var boolean
