@@ -1,6 +1,8 @@
-# Depend 1.0.3
+# Depend
 
 Less Configuration, More Injection
+
+[![Latest Stable Version](https://poser.pugx.org/codeblanche/depend/v/stable.png)](https://packagist.org/packages/codeblanche/depend) [![Latest Unstable Version](https://poser.pugx.org/codeblanche/depend/v/unstable.png)](https://packagist.org/packages/codeblanche/depend) [![License](https://poser.pugx.org/codeblanche/depend/license.png)](https://packagist.org/packages/codeblanche/depend)
 
 ## Introduction
 
