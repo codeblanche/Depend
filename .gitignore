@@ -1,6 +1,6 @@
 .AppleDouble
 .idea
-public
+public/coverage/
 docs
 build
 vendor/*
