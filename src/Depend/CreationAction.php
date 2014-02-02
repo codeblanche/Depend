@@ -44,4 +44,27 @@ class CreationAction implements ActionInterface
 
         return $this;
     }
+
+    /**
+     * Returns an unique identifier for the function/method
+     *
+     * @return string
+     */
+    public function getIdentifier()
+    {
+        if (is_array($this->callback)) {
+            $class = $this->callback[0];
+
+            if (is_object($class)) {
+                $class = get_class($class);
+            }
+
+            return $class . '::' . $this->callback[1];
+        }
+        else if (is_object($this->callback)) {
+            return spl_object_hash((object) $this->callback);
+        }
+
+        return (string) $this->callback;
+    }
 }

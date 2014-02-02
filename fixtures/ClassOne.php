@@ -2,6 +2,14 @@
 
 class ClassOne implements InterfaceOne
 {
+    /**
+     * @var ClassStub
+     */
+    protected $stub;
+
+    /**
+     *
+     */
     function __construct()
     {
     }
@@ -13,5 +21,6 @@ class ClassOne implements InterfaceOne
      */
     public function setStub(ClassStub $stub)
     {
+        $this->stub = $stub;
     }
 }

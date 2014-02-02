@@ -1,6 +1,12 @@
 <?php
 
+if (!isset($_SERVER['REQUEST_TIME_FLOAT'])) {
+    $_SERVER['REQUEST_TIME_FLOAT'] = microtime(true);
+}
+
 require_once __DIR__ . '/../bootstrap.php';
+require_once __DIR__ . '/../fixtures/InterfaceThree.php';
+require_once __DIR__ . '/../fixtures/InterfaceTwo.php';
 require_once __DIR__ . '/../fixtures/InterfaceOne.php';
 require_once __DIR__ . '/../fixtures/ClassA.php';
 require_once __DIR__ . '/../fixtures/ClassB.php';
@@ -9,6 +15,7 @@ require_once __DIR__ . '/../fixtures/ClassD.php';
 require_once __DIR__ . '/../fixtures/ClassE.php';
 require_once __DIR__ . '/../fixtures/ClassF.php';
 require_once __DIR__ . '/../fixtures/ClassOne.php';
+require_once __DIR__ . '/../fixtures/ClassTwo.php';
 require_once __DIR__ . '/../fixtures/ClassXA.php';
 require_once __DIR__ . '/../fixtures/ClassCircularRefA.php';
 require_once __DIR__ . '/../fixtures/ClassCircularRefB.php';
@@ -133,12 +140,14 @@ try {
         )
     );
 
+    $dm->describe('InterfaceOne', null, array($if->create('setStub', $dm->describe('ClassStub'))));
+
     /*
      * Get an instance of the class you want. You can also provide a second
      * optional parameter array containing arguments that should override
      * any previously described arguments.
      */
-    $a = $dm->get('ClassA');
+    $a = $dm->get('ClassTwo');
 
     var_dump($a);
 }
@@ -150,4 +159,7 @@ catch (Exception $e) {
     echo $e->getTraceAsString();
 }
 
-
+echo '<pre>' . "\n";
+echo 'processing duration: ' . round((microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']) * 1000) . ' ms' . "\n";
+echo 'peak memory usage: ' . memory_get_peak_usage(true) / 1024 / 1024 . ' MB' . "\n";
+echo '</pre>' . "\n";

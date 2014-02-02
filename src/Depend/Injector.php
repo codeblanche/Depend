@@ -13,7 +13,7 @@ class Injector implements InjectorInterface
     protected $params = array();
 
     /**
-     * @var callable
+     * @var string
      */
     protected $methodName;
 
@@ -66,5 +66,15 @@ class Injector implements InjectorInterface
         $this->params = $params;
 
         return $this;
+    }
+
+    /**
+     * Returns an unique identifier for the function/method
+     *
+     * @return string
+     */
+    public function getIdentifier()
+    {
+        return $this->methodName;
     }
 }

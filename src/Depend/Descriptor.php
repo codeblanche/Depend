@@ -4,9 +4,9 @@ namespace Depend;
 
 use Depend\Abstraction\ActionInterface;
 use Depend\Abstraction\DescriptorInterface;
-use Depend\Exception\InvalidArgumentException;
 use Depend\Exception\RuntimeException;
 use ReflectionClass;
+use SplObjectStorage;
 
 class Descriptor implements DescriptorInterface
 {
@@ -61,15 +61,50 @@ class Descriptor implements DescriptorInterface
     protected $reflectionConstructor;
 
     /**
+     * @var Descriptor
+     */
+    protected $parent;
+
+    /**
+     * @var Descriptor[]
+     */
+    protected $interfaces = array();
+
+    /**
+     * @var SplObjectStorage
+     */
+    protected static $queue;
+
+    /**
+     * Default constructor
+     */
+    function __construct()
+    {
+        self::$queue = new SplObjectStorage();
+    }
+
+    /**
      * Execute the given callback after class instance is created.
      *
      * @param ActionInterface $action
      *
      * @return Descriptor
      */
-    public function addAction(ActionInterface $action)
+    public function addAction($action)
     {
-        $this->actions[] = $action;
+        if (!$action instanceof ActionInterface) {
+            return $this;
+        }
+
+        //        var_dump($action->getIdentifier());
+
+        $name = $action->getIdentifier();
+
+        if (empty($name)) {
+            return $this;
+        }
+
+        $this->actions[$name] = $action;
 
         return $this;
     }
@@ -91,7 +126,28 @@ class Descriptor implements DescriptorInterface
      */
     public function getActions()
     {
-        return $this->actions;
+        if (self::$queue->contains($this)) {
+            return array();
+        }
+
+        self::$queue->attach($this);
+
+        $actions = $this->actions;
+
+        if (is_array($this->interfaces)) {
+            /** @var $interface Descriptor */
+            foreach ($this->interfaces as $interface) {
+                $actions = array_replace($interface->getActions(), $actions);
+            }
+        }
+
+        if ($this->parent instanceof Descriptor) {
+            $actions = array_replace($this->parent->getActions(), $actions);
+        }
+
+        self::$queue->detach($this);
+
+        return $actions;
     }
 
     /**
@@ -115,7 +171,13 @@ class Descriptor implements DescriptorInterface
      */
     public function getParams()
     {
-        return $this->params;
+        $params = $this->params;
+
+        if ($this->parent instanceof Descriptor) {
+            $params = array_replace($this->parent->getParams(), $params);
+        }
+
+        return $params;
     }
 
     /**
@@ -161,6 +223,8 @@ class Descriptor implements DescriptorInterface
             return $this;
         }
 
+        $this->interfaces            = $this->resolveInterfaces();
+        $this->parent                = $this->resolveParent();
         $this->reflectionConstructor = $this->reflectionClass->getConstructor();
 
         if (is_null($this->reflectionConstructor)) {
@@ -186,9 +250,36 @@ class Descriptor implements DescriptorInterface
     }
 
     /**
+     * @return Descriptor[]
+     */
+    protected function resolveInterfaces()
+    {
+        $interfaces = array();
+
+        foreach ($this->reflectionClass->getInterfaceNames() as $interface) {
+            $interfaces[] = $this->manager->describe($interface);
+        }
+
+        return $interfaces;
+    }
+
+    /**
+     * @return Descriptor
+     */
+    protected function resolveParent()
+    {
+        $parent = $this->reflectionClass->getParentClass();
+
+        if (!$parent instanceof ReflectionClass) {
+            return null;
+        }
+
+        return $this->manager->describe($parent->getName(), null, null, $parent);
+    }
+
+    /**
      * @param ActionInterface[] $actions
      *
-     * @throws Exception\InvalidArgumentException
      * @return Descriptor
      */
     public function setActions($actions)
@@ -197,7 +288,9 @@ class Descriptor implements DescriptorInterface
             return $this;
         }
 
-        $this->actions = $actions;
+        foreach ($actions as $action) {
+            $this->addAction($action);
+        }
 
         return $this;
     }
@@ -260,13 +353,25 @@ class Descriptor implements DescriptorInterface
      */
     public function setParam($identifier, $value)
     {
-        if (is_numeric($identifier) && isset($this->paramNames[$identifier])) {
-            $identifier = $this->paramNames[$identifier];
-        }
-
-        $this->params[$identifier] = $value;
+        $this->params[$this->resolveParamName($identifier)] = $value;
 
         return $this;
+    }
+
+    /**
+     * Resolve the parameter name
+     *
+     * @param int|string $identifier
+     *
+     * @return string|int
+     */
+    public function resolveParamName($identifier)
+    {
+        if (!isset($this->paramNames[$identifier])) {
+            return $identifier;
+        }
+
+        return $this->paramNames[$identifier];
     }
 
     /**
@@ -298,6 +403,8 @@ class Descriptor implements DescriptorInterface
         $this->reflectionClass       = null;
         $this->reflectionConstructor = null;
         $this->constructorParams     = array();
+        $this->parent                = null;
+        $this->interfaces            = null;
     }
 
     /**
@@ -312,7 +419,6 @@ class Descriptor implements DescriptorInterface
         }
 
         return $param->getDefaultValue();
-
     }
 
     /**
@@ -336,8 +442,8 @@ class Descriptor implements DescriptorInterface
         }
 
         if (!($this->manager instanceof Manager)) {
-            throw new RuntimeException("Unable to retrieve descriptor for class '{$paramClass->getName()}' " .
-            "because the manager has not been set. Please use Descriptor::setManager to resolve this.");
+            throw new RuntimeException("Unable to retrieve descriptor for class '{$paramClass->getName(
+                                       )}' " . "because the manager has not been set. Please use Descriptor::setManager to resolve this.");
         }
 
         return $this->manager->describe($paramClass->getName(), null, null, $paramClass);

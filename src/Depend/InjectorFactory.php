@@ -22,7 +22,7 @@ class InjectorFactory
 
     /**
      * @param string $methodName
-     * @param array  $params
+     * @param mixed  $params
      *
      * @return InjectorInterface
      */

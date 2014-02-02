@@ -4,12 +4,13 @@ namespace Depend;
 
 use Depend\Abstraction\ActionInterface;
 use Depend\Abstraction\DescriptorInterface;
-use Depend\Abstraction\FactoryInterface;
 use Depend\Abstraction\InjectorInterface;
 use Depend\Abstraction\ModuleInterface;
+use Depend\Exception\CircularReferenceException;
 use Depend\Exception\InvalidArgumentException;
-use Depend\Exception\RuntimeException;
 use ReflectionClass;
+use RuntimeException;
+use SplObjectStorage;
 
 class Manager
 {
@@ -22,11 +23,6 @@ class Manager
      * @var DescriptorInterface[]
      */
     protected $descriptors = array();
-
-    /**
-     * @var FactoryInterface
-     */
-    protected $factory;
 
     /**
      * @var object[]
@@ -44,30 +40,28 @@ class Manager
     protected $queue = array();
 
     /**
-     * @param FactoryInterface    $factory
+     * @var SplObjectStorage
+     */
+    protected $deferredActions;
+
+    /**
      * @param DescriptorInterface $descriptorPrototype
      */
-    public function __construct(FactoryInterface $factory = null, DescriptorInterface $descriptorPrototype = null)
+    public function __construct(DescriptorInterface $descriptorPrototype = null)
     {
-        if (!($factory instanceof FactoryInterface)) {
-            $factory = new Factory;
-        }
-
         if (!($descriptorPrototype instanceof DescriptorInterface)) {
             $descriptorPrototype = new Descriptor;
         }
 
+        $this->deferredActions     = new SplObjectStorage();
         $this->descriptorPrototype = $descriptorPrototype;
-        $this->factory             = $factory;
 
         $this->descriptorPrototype->setManager($this);
 
-        $this->implement('Depend\Abstraction\FactoryInterface', 'Depend\Factory');
         $this->implement('Depend\Abstraction\DescriptorInterface', 'Depend\Descriptor')->setIsShared(false);
         $this->implement('Depend\Abstraction\InjectorInterface', 'Depend\Injector');
         $this->describe('Depend\Manager');
         $this->set('Depend\Manager', $this);
-        $this->set('Depend\Factory', $factory);
         $this->set('Depend\Descriptor', $descriptorPrototype);
     }
 
@@ -139,13 +133,19 @@ class Manager
      * @param array           $params
      * @param array           $actions
      * @param ReflectionClass $reflectionClass
+     * @param string          $implementation
      *
      * @throws Exception\RuntimeException
      * @throws Exception\InvalidArgumentException
      * @return Descriptor|DescriptorInterface
      */
-    public function describe($className, $params = null, $actions = null, ReflectionClass $reflectionClass = null)
-    {
+    public function describe(
+        $className,
+        $params = null,
+        $actions = null,
+        ReflectionClass $reflectionClass = null,
+        $implementation = null
+    ) {
         $key = $this->makeKey($className);
 
         if (isset($this->descriptors[$key])) {
@@ -163,16 +163,23 @@ class Manager
             throw new InvalidArgumentException("Class '$className' could not be found");
         }
 
+        if (!is_null($implementation)) {
+            if (!class_exists($implementation) && !interface_exists($implementation)) {
+                throw new InvalidArgumentException("Class '$implementation' could not be found");
+            }
+
+            $reflectionClass = new ReflectionClass($implementation);
+
+            if (!$reflectionClass->isSubclassOf($className)) {
+                throw new InvalidArgumentException("Given class '$implementation' does not inherit from '$className'");
+            }
+        }
+
         if (!($reflectionClass instanceof ReflectionClass)) {
             $reflectionClass = new ReflectionClass($className);
         }
 
-        if ($reflectionClass->isInterface()) {
-            throw new RuntimeException("Given class name '$className' is an interface.\nPlease use the 'Manager::implement({interfaceName}, {className})' method to describe your implementation class.");
-        }
-
-        $descriptor = clone $this->descriptorPrototype;
-
+        $descriptor              = clone $this->descriptorPrototype;
         $this->descriptors[$key] = $descriptor;
 
         $descriptor->load($reflectionClass)->setParams($params)->setActions($actions);
@@ -185,37 +192,59 @@ class Manager
      * @param array  $paramsOverride
      *
      * @return object
+     * @throws \RuntimeException
      */
-    public function get($name, $paramsOverride = null)
+    public function get($name, $paramsOverride = array())
     {
-        $descriptor = $this->describe($name);
-        $key        = $this->makeKey($name);
-        $instance   = null;
+        $key             = $this->makeKey($name);
+        $descriptor      = $this->describe($name);
+        $reflectionClass = $descriptor->getReflectionClass();
+        $class           = $reflectionClass->getName();
 
-        if (is_array($paramsOverride) && !empty($paramsOverride)) {
-            $descriptor = clone $descriptor;
-            $descriptor->setParams($paramsOverride);
+        if (in_array($class, $this->queue)) {
+            $parent = end($this->queue);
 
-            return $this->create($descriptor);
+            throw new CircularReferenceException("Circular dependency found for class '$class' in class '$parent'. Please use a setter method to resolve this.");
         }
 
-        if (!isset($this->instances[$key])) {
-            $instance = $this->create($descriptor, $this->instances[$key]);
+        array_push($this->queue, $class);
+
+        $params = $descriptor->getParams();
+
+        if (!empty($paramsOverride)) {
+            $paramsKeys     = array_map(array($descriptor, 'resolveParamName'), array_keys($paramsOverride));
+            $paramsOverride = array_combine($paramsKeys, $paramsOverride);
+            $params         = array_replace($params, $paramsOverride);
         }
 
-        if ($descriptor->isShared()) {
+        $args = $this->resolveParams($params);
+
+        array_pop($this->queue);
+
+        if ($descriptor->isShared() && isset($this->instances[$key])) {
             return $this->instances[$key];
         }
 
-        if ($descriptor->isCloneable()) {
+        if ($descriptor->isCloneable() && isset($this->instances[$key])) {
             return clone $this->instances[$key];
         }
 
-        if (is_null($instance)) {
-            $instance = $this->create($descriptor);
+        if (!$reflectionClass->isInstantiable()) {
+            throw new RuntimeException("Class '$class' is is not instantiable");
         }
 
-        unset($this->instances[$key]);
+        $this->instances[$key] = null;
+
+        if (empty($args)) {
+            $instance = $reflectionClass->newInstance();
+        }
+        else {
+            $instance = $reflectionClass->newInstanceArgs($args);
+        }
+
+        $this->instances[$key] = $instance;
+
+        $this->executeActions($descriptor->getActions(), $this->instances[$key]);
 
         return $instance;
     }
@@ -223,22 +252,13 @@ class Manager
     /**
      * @param string $interface
      * @param string $name
+     * @param array  $actions
      *
-     * @throws Exception\InvalidArgumentException
      * @return Descriptor|DescriptorInterface
      */
-    public function implement($interface, $name)
+    public function implement($interface, $name, $actions = null)
     {
-        $descriptor = $this->describe($name);
-
-        if (!$descriptor->getReflectionClass()->implementsInterface($interface)) {
-            throw new InvalidArgumentException("Given class '$name' does not implement '$interface'");
-        }
-
-        $key                     = $this->makeKey($interface);
-        $this->descriptors[$key] = $descriptor;
-
-        return $descriptor;
+        return $this->describe($interface, null, $actions, null, $name);
     }
 
     /**
@@ -285,36 +305,6 @@ class Manager
     }
 
     /**
-     * Create an instance of the given class descriptor
-     *
-     * @param Abstraction\DescriptorInterface $descriptor
-     * @param object                          $instance
-     *
-     * @throws Exception\RuntimeException
-     * @return object
-     */
-    protected function create(DescriptorInterface $descriptor, &$instance = null)
-    {
-        $class = $descriptor->getReflectionClass()->getName();
-
-        if (in_array($class, $this->queue)) {
-            $parent = end($this->queue);
-
-            throw new RuntimeException("Circular dependency found for class '$class' in class '$parent'. Please use a setter method to resolve this.");
-        }
-
-        array_push($this->queue, $class);
-
-        $instance = $this->factory->create($descriptor, $this);
-
-        array_pop($this->queue);
-
-        $this->executeActions($descriptor->getActions(), $instance);
-
-        return $instance;
-    }
-
-    /**
      * @param array  $actions
      * @param object $instance
      */
@@ -325,18 +315,36 @@ class Manager
         }
 
         foreach ($actions as $action) {
-            if (!($action instanceof ActionInterface)) {
-                continue;
-            }
+            try {
+                if ($action instanceof InjectorInterface) {
+                    $action->setParams($this->resolveParams($action->getParams()));
+                }
 
-            if ($action instanceof InjectorInterface) {
-                $action->setParams($this->resolveParams($action->getParams()));
+                $action->execute($instance);
             }
-
-            $action->execute($instance);
+            catch (CircularReferenceException $e) {
+                $this->deferredActions->attach(new DeferredAction($action, $instance));
+            }
         }
 
-        return;
+        if ($this->deferredActions->count() > 0) {
+            /** @var $deferredAction DeferredAction */
+            foreach ($this->deferredActions as $deferredAction) {
+                $action = $deferredAction->getAction();
+
+                try {
+                    if ($action instanceof InjectorInterface) {
+                        $action->setParams($this->resolveParams($action->getParams()));
+                    }
+
+                    $action->execute($deferredAction->getContext());
+
+                    $this->deferredActions->detach($deferredAction);
+                }
+                catch (CircularReferenceException $e) {
+                }
+            }
+        }
     }
 
     /**
