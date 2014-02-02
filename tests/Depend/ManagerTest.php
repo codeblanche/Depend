@@ -4,6 +4,7 @@ namespace Depend;
 
 use ClassA;
 use ClassF;
+use Depend\Abstraction\ModuleInterface;
 use Depend\Exception\InvalidArgumentException;
 use Depend\Exception\RuntimeException;
 
@@ -14,12 +15,16 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
      */
     protected $manager;
 
+    /**
+     * @var InjectorFactory
+     */
+    protected $if;
+
     public function setUp()
     {
-        $factory    = new Factory();
-        $descriptor = new Descriptor();
-
-        $this->manager = new Manager($factory, $descriptor);
+        $descriptor    = new Descriptor();
+        $this->manager = new Manager($descriptor);
+        $this->if      = new InjectorFactory();
     }
 
     public function testAdd()
@@ -49,8 +54,6 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals($descriptor, $this->manager->describe('testF'));
     }
-
-
 
     public function testComplexStructure()
     {
@@ -101,7 +104,6 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf('ClassB', $a->getB());
         $this->assertInstanceOf('ClassC', $a->getC());
         $this->assertInstanceOf('ClassD', $a->getD());
-
     }
 
     public function testConstructor()
@@ -116,14 +118,6 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
         $descriptor = $this->manager->describe('ClassF');
 
         $this->assertInstanceOf('\Depend\Descriptor', $descriptor);
-    }
-
-    /**
-     * @expectedException RuntimeException
-     */
-    public function testDescribeInterface()
-    {
-        $this->manager->describe('InterfaceOne');
     }
 
     /**
@@ -146,10 +140,14 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
 
     public function testNonValidActionGracefulFailure()
     {
-        $this->manager->describe('ClassC', null, array(
-            new CreationAction(),
-            'fake action',
-        ));
+        $this->manager->describe(
+            'ClassC',
+            null,
+            array(
+                new CreationAction(),
+                'fake action',
+            )
+        );
 
         $c = $this->manager->get('ClassC');
 
@@ -216,6 +214,61 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
         $this->manager->implement('InterfaceOne', 'ClassF');
     }
 
+    /**
+     * @expectedException InvalidArgumentException
+     */
+    public function testDescribeInvalidImplementation()
+    {
+        $this->manager->describe('InterfaceOne', null, null, null, 'NonExistentClass');
+    }
+
+    public function testSetActions()
+    {
+        $action1 = $this->if->create('testMethod1', array());
+        $action2 = $this->if->create('testMethod2', array());
+
+        $this->manager->describe('ClassOne', null, array($action1));
+
+        $this->manager->describe('ClassOne', null, array($action2));
+
+        $this->assertContains($action1, $this->manager->describe('ClassOne')->getActions());
+    }
+
+    public function testModule()
+    {
+        $mock = $this->getMock('Depend\Abstraction\ModuleInterface', array(), array(), 'ModuleInterfaceMock');
+
+        $this->assertTrue($mock instanceof ModuleInterface);
+
+        $this->assertInstanceOf('Depend\Manager', $this->manager->module($mock));
+        $this->assertInstanceOf('Depend\Manager', $this->manager->module('ModuleInterfaceMock'));
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testModuleNotFoundException()
+    {
+        $this->manager->module('NonExistentClass');
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testModuleNotValidException()
+    {
+        $mock = $this->getMock('NonModuleInterfaceMock');
+
+        $this->manager->module($mock);
+    }
+
+    public function testGracefulNonActionInterface()
+    {
+        $this->manager->describe('ClassOne', null, array('not an action'));
+
+        $this->manager->get('ClassOne');
+    }
+
     public function testResolveParams()
     {
         $input = array(
@@ -240,5 +293,13 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
         $this->manager->set('testStdClass', $expected);
 
         $this->assertEquals(spl_object_hash($expected), spl_object_hash($this->manager->get('testStdClass')));
+    }
+
+    /**
+     * @expectedException RuntimeException
+     */
+    public function testGetNonInstantiableException()
+    {
+        $this->manager->get('ClassNoInstance');
     }
 }

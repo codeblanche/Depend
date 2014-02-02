@@ -17,16 +17,6 @@ class DescriptorTest extends \PHPUnit_Framework_TestCase
         $this->descriptor = new Descriptor();
     }
 
-    /**
-     * @expectedException RuntimeException
-     */
-    public function testManagerDependency()
-    {
-        $descriptor = new Descriptor();
-
-        $descriptor->load(new ReflectionClass('ClassF'));
-    }
-
     public function testSetGetManager()
     {
         $manager = new Manager();
@@ -116,7 +106,8 @@ class DescriptorTest extends \PHPUnit_Framework_TestCase
 
     public function testAddAction()
     {
-        $action = new CreationAction(function ($object) {});
+        $action = new CreationAction();
+        $action->setCallback(function ($object) {});
 
         $this->descriptor->addAction($action);
 
@@ -125,14 +116,26 @@ class DescriptorTest extends \PHPUnit_Framework_TestCase
 
     public function testSetGetActions()
     {
+        $action1 = new CreationAction();
+        $action2 = new Injector();
+
+        $action1->setCallback(function ($object) { var_dump($object); });
+        $action2->setMethodName('amethod');
+
         $actions = array(
-            new CreationAction(),
-            new Injector()
+            $action1,
+            $action2,
         );
 
         $this->descriptor->setActions($actions);
 
-        $this->assertEquals($actions, $this->descriptor->getActions());
+        $this->assertEquals(
+            array(
+                $action1->getIdentifier() => $action1,
+                $action2->getIdentifier() => $action2,
+            ),
+            $this->descriptor->getActions()
+        );
     }
 
     public function testSetGetName()
@@ -160,5 +163,12 @@ class DescriptorTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-
+    /**
+     * @expectedException RuntimeException
+     */
+    public function testResolveArgumentValueException()
+    {
+        $reflectionClass = new ReflectionClass('ClassA');
+        $this->descriptor->load($reflectionClass);
+    }
 }

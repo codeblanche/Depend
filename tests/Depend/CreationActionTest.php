@@ -57,4 +57,13 @@ class CreationActionTest extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf('\Depend\CreationAction', $returned);
         $this->assertEquals(spl_object_hash($this->action), spl_object_hash($returned));
     }
+
+    public function testGetIdentifier()
+    {
+        $this->action->setCallback(array($this, 'callback'));
+
+        $identifier = $this->action->getIdentifier();
+
+        $this->assertNotNull($identifier);
+    }
 }
