@@ -148,7 +148,7 @@ class Manager
     ) {
         $key = $this->makeKey($className);
 
-        if (isset($this->descriptors[$key])) {
+        if (isset($this->descriptors[$key]) && empty($implementation)) {
             $descriptor = $this->descriptors[$key];
             $descriptor->setParams($params);
 
