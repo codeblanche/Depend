@@ -193,7 +193,28 @@ class Descriptor implements DescriptorInterface
      */
     public function isCloneable()
     {
-        return $this->isCloneable;
+        if (!$this->isCloneable) {
+            return false;
+        }
+
+        if ($this->parent && !$this->parent->isCloneable()) {
+            return false;
+        }
+
+        if (is_array($this->interfaces)) {
+            /** @var $interface Descriptor */
+            foreach ($this->interfaces as $interface) {
+                if ($interface->getName() === $this->getName()) {
+                    continue;
+                }
+
+                if (!$interface->isCloneable()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -201,7 +222,28 @@ class Descriptor implements DescriptorInterface
      */
     public function isShared()
     {
-        return $this->isShared;
+        if (!$this->isShared) {
+            return false;
+        }
+
+        if ($this->parent && !$this->parent->isShared()) {
+            return false;
+        }
+
+        if (is_array($this->interfaces)) {
+            /** @var $interface Descriptor */
+            foreach ($this->interfaces as $interface) {
+                if ($interface->getName() === $this->getName()) {
+                    continue;
+                }
+
+                if (!$interface->isShared()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
