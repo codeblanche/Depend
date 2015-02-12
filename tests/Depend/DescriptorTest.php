@@ -131,8 +131,8 @@ class DescriptorTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals(
             array(
-                $action1->getIdentifier() => $action1,
-                $action2->getIdentifier() => $action2,
+                $action1,
+                $action2,
             ),
             $this->descriptor->getActions()
         );

@@ -96,15 +96,13 @@ class Descriptor implements DescriptorInterface
             return $this;
         }
 
-        //        var_dump($action->getIdentifier());
-
         $name = $action->getIdentifier();
 
         if (empty($name)) {
             return $this;
         }
 
-        $this->actions[$name] = $action;
+        $this->actions[] = $action;
 
         return $this;
     }
@@ -137,12 +135,12 @@ class Descriptor implements DescriptorInterface
         if (is_array($this->interfaces)) {
             /** @var $interface Descriptor */
             foreach ($this->interfaces as $interface) {
-                $actions = array_replace($interface->getActions(), $actions);
+                $actions = array_merge($interface->getActions(), $actions);
             }
         }
 
         if ($this->parent instanceof Descriptor) {
-            $actions = array_replace($this->parent->getActions(), $actions);
+            $actions = array_merge($this->parent->getActions(), $actions);
         }
 
         self::$queue->detach($this);
